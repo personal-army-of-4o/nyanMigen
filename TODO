@@ -1,4 +1,3 @@
 1. assign conversion:
-    1.1. check if module is infact a Module()
     1.2. check if target signal is infact a Signal()
 
