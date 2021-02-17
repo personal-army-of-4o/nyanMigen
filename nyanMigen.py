@@ -42,6 +42,19 @@ class nyanMigen:
     def _parse_moodule(code, ctx):
         if isinstance(code, Assign):
             if (
+                code.value.func.id == "Signal" and
+                isinstance(code.value.func.ctx, Load) and
+                len(code.value.keywords) == 0
+            ):
+                for i in code.targets:
+                    if isinstance(i, Name):
+                        if isinstance(i.ctx, Store):
+                            ctx[i.id] = "Signal()"
+
+    @converter
+    def _parse_moodule(code, ctx):
+        if isinstance(code, Assign):
+            if (
                 code.value.func.id == "Module" and
                 isinstance(code.value.func.ctx, Load) and
                 len(code.value.args) == 0 and
@@ -61,11 +74,15 @@ class nyanMigen:
             raise Exception()
 
     def _can_convert_assign(arg, ctx):
-        return nyanMigen._is_module(arg[0], ctx)
+        if (nyanMigen._is_type(arg[0], ctx, "Module()") and
+            nyanMigen._is_type(arg[2], ctx, "Signal()")
+        ):
+            return True
+        return False
 
-    def _is_module(m, ctx):
+    def _is_type(m, ctx, t):
         if m in ctx:
-            if ctx[m] == "Module()":
+            if ctx[m] == t:
                 return True
         return False
 
