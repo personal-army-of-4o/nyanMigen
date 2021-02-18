@@ -1,8 +1,13 @@
 import ast
-from ast import Assign, AugAssign
+from ast import Assign, AugAssign, Name, Load, Store
 import inspect
 from pprintast import pprintast as ppast
 
+
+converters = []
+def converter(foo):
+    converters.append(foo)
+    return foo
 
 class nyanMigen:
     def code(method):
@@ -19,21 +24,67 @@ class nyanMigen:
         code.body[0].body = body
 
     def _nyanify(code):
-        fns = [nyanMigen._convert_assign, nyanMigen._convert_branching]
+        ctx = {}
         ret = []
         for i in code:
-            for f in fns:
+            for f in converters:
                 try:
-                    i = f(i)
-                    break
+                    ii = f(i, ctx)
+                    if ii:
+                        i = ii
+                        break
                 except:
                     pass
             ret.append(i)
         return ret
 
-    def _convert_assign(code):
-        (module, domain, target, value) = nyanMigen._parse_assign(code)
-        return nyanMigen._dump_assign(module, domain, target, value)
+    @converter
+    def _parse_moodule(code, ctx):
+        if isinstance(code, Assign):
+            if (
+                code.value.func.id == "Signal" and
+                isinstance(code.value.func.ctx, Load) and
+                len(code.value.keywords) == 0
+            ):
+                for i in code.targets:
+                    if isinstance(i, Name):
+                        if isinstance(i.ctx, Store):
+                            ctx[i.id] = "Signal()"
+
+    @converter
+    def _parse_moodule(code, ctx):
+        if isinstance(code, Assign):
+            if (
+                code.value.func.id == "Module" and
+                isinstance(code.value.func.ctx, Load) and
+                len(code.value.args) == 0 and
+                len(code.value.keywords) == 0
+            ):
+                for i in code.targets:
+                    if isinstance(i, Name):
+                        if isinstance(i.ctx, Store):
+                            ctx[i.id] = "Module()"
+
+    @converter
+    def _convert_assign(code, ctx):
+        (module, domain, target, value) = i = nyanMigen._parse_assign(code)
+        if nyanMigen._can_convert_assign(i, ctx):
+            return nyanMigen._dump_assign(module, domain, target, value)
+        else:
+            raise Exception()
+
+    def _can_convert_assign(arg, ctx):
+        if (nyanMigen._is_type(arg[0], ctx, "Module()") and
+            nyanMigen._is_type(arg[2], ctx, "Signal()")
+        ):
+            return True
+        return False
+
+    def _is_type(m, ctx, t):
+        if m in ctx:
+            if ctx[m] == t:
+                return True
+        return False
 
     def _parse_assign(code):
         if isinstance(code, Assign):
@@ -52,6 +103,7 @@ class nyanMigen:
         ret.value.args = [v]
         return ret
 
-    def _convert_branching(code):
+    @converter
+    def _convert_branching(code, ctx):
         return code
         
