@@ -1,8 +1,16 @@
 import ast
-from ast import Assign, AugAssign, Name, Load, Store
 import inspect
-from pprintast import pprintast as ppast
+from ast import Assign, AugAssign, Name, Load, Store
+from pprintast import pprintast as ppa
 
+
+def nyanify(cls):
+    code = nyanMigen.parse(cls.elaborate)
+    fixed_code = nyanMigen.fix(code)
+    fixed_code.body[0].decorator_list = []
+    method = nyanMigen.compile(fixed_code)
+    cls.elaborate = method
+    return cls
 
 converters = []
 def converter(foo):
@@ -10,8 +18,33 @@ def converter(foo):
     return foo
 
 class nyanMigen:
-    def code(method):
-        code = ast.parse(inspect.getsource(method))
+    def parse(code):
+        code = inspect.getsource(code)
+        code = nyanMigen.unindent(code)
+        return ast.parse(code)
+
+    def unindent(s):
+        ret = ""
+        indent = 0;
+        for i in range(len(s)):
+            if s[i] != " ":
+                break
+            else:
+                indent += 1
+        if indent > 0:
+            for l in s.splitlines():
+                if l[0:indent-1] != s[:indent-1]:
+                    raise Exception("invalid code string")
+                ret += l[indent:] + "\n"
+        return ret
+
+    def compile(method):
+        code = compile(filename="fakename", source=method, mode="exec")
+        mod = {}
+        exec(code, mod)
+        return mod["elaborate"]
+
+    def fix(code):
         body = nyanMigen._getbody(code)
         body = nyanMigen._nyanify(body)
         nyanMigen._setbody(code, body)
@@ -106,4 +139,5 @@ class nyanMigen:
     @converter
     def _convert_branching(code, ctx):
         return code
-        
+
+
