@@ -1,2 +1,0 @@
-make Module imlicit in elaborate()
-2. change detected pattern to `<domain name>.<signal name> = <value>`
