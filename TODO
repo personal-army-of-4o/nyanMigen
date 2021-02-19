@@ -1,0 +1,3 @@
+make Module imlicit in elaborate()
+1. add `m = Module()` to `elaborate()`
+2. change detected pattern to `<domain name>.<signal name> = <value>`
