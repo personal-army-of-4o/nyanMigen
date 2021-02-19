@@ -1,0 +1,1 @@
+implement "t = v" -> "m.d.comb += t.eq(v)" if t is a Signal and m is a random Module from elaborate()
