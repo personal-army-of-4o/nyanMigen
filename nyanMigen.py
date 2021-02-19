@@ -49,9 +49,16 @@ class nyanMigen:
 
     def fix(code):
         body = nyanMigen._getbody(code)
+        body = nyanMigen._add_module(body)
         body = nyanMigen._nyanify(body)
         nyanMigen._setbody(code, body)
         return code
+
+    def _add_module(code):
+        modcode = ast.parse("m = Module()")
+        modcode = modcode.body
+        modcode.extend(code)
+        return modcode
 
     def _getbody(code):
         return code.body[0].body
