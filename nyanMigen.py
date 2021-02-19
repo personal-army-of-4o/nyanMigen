@@ -1,13 +1,16 @@
 import ast
 import inspect
-from ast import Assign, AugAssign, Name, Load, Store
+from ast import Assign, AugAssign, Name, Load, Store, Call
 from pprintast import pprintast as ppa
+from astunparse import unparse
 
 
 def nyanify(cls):
     code = nyanMigen.parse(cls.elaborate)
+    print(unparse(code))
     fixed_code = nyanMigen.fix(code)
     fixed_code.body[0].decorator_list = []
+    print(unparse(fixed_code))
     method = nyanMigen.compile(fixed_code)
     cls.elaborate = method
     return cls
@@ -66,13 +69,13 @@ class nyanMigen:
                     if ii:
                         i = ii
                         break
-                except:
+                except Exception as e:
                     pass
             ret.append(i)
         return ret
 
     @converter
-    def _parse_moodule(code, ctx):
+    def _parse_signal(code, ctx):
         if isinstance(code, Assign):
             if (
                 code.value.func.id == "Signal" and
@@ -85,7 +88,7 @@ class nyanMigen:
                             ctx[i.id] = "Signal()"
 
     @converter
-    def _parse_moodule(code, ctx):
+    def _parse_module(code, ctx):
         if isinstance(code, Assign):
             if (
                 code.value.func.id == "Module" and
@@ -99,14 +102,38 @@ class nyanMigen:
                             ctx[i.id] = "Module()"
 
     @converter
-    def _convert_assign(code, ctx):
-        (module, domain, target, value) = i = nyanMigen._parse_assign(code)
-        if nyanMigen._can_convert_assign(i, ctx):
+    def _convert_comb_assign(code, ctx):
+        (target, value) = i = nyanMigen._parse_comb_assign(code)
+        module = nyanMigen._get_module(ctx)
+        if not module:
+            return
+        if nyanMigen._can_convert_comb_assign(i, ctx):
+            return nyanMigen._dump_assign(module, None, target, value)
+        else:
+            raise Exception()
+
+    def _get_module(ctx):
+        for i in list(ctx.keys()):
+            if ctx[i] == "Module()":
+                return i
+        return None
+
+    @converter
+    def _convert_sync_assign(code, ctx):
+        (module, domain, target, value) = i = nyanMigen._parse_sync_assign(code)
+        if nyanMigen._can_convert_sync_assign(i, ctx):
             return nyanMigen._dump_assign(module, domain, target, value)
         else:
             raise Exception()
 
-    def _can_convert_assign(arg, ctx):
+    def _can_convert_comb_assign(arg, ctx):
+        if (not isinstance(arg[1], Call) and
+            nyanMigen._is_type(arg[0], ctx, "Signal()")
+        ):
+            return True
+        return False
+
+    def _can_convert_sync_assign(arg, ctx):
         if (nyanMigen._is_type(arg[0], ctx, "Module()") and
             nyanMigen._is_type(arg[2], ctx, "Signal()")
         ):
@@ -119,7 +146,14 @@ class nyanMigen:
                 return True
         return False
 
-    def _parse_assign(code):
+    def _parse_comb_assign(code):
+        if isinstance(code, Assign):
+            if len(code.targets) == 1:
+                target = code.targets[0].id
+                value = code.value
+        return (target, value)
+
+    def _parse_sync_assign(code):
         if isinstance(code, Assign):
             if len(code.targets) == 1:
                 module = code.targets[0].value.value.value.id
@@ -129,6 +163,8 @@ class nyanMigen:
         return (module, domain, target, value)
 
     def _dump_assign(m, d, t, v):
+        if not d:
+            d = "comb"
         ret = ast.parse("m.d.sync += t.eq(v)").body[0]
         ret.target.value.value.id = m
         ret.target.attr = d
@@ -138,6 +174,6 @@ class nyanMigen:
 
     @converter
     def _convert_branching(code, ctx):
-        return code
+        return None
 
 
