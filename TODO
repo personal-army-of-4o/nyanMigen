@@ -1,0 +1,3 @@
+simplify if:
+1. parse if string to get all equation dependencies
+3. if there's a signal in equation, then replace it with `with m.If(...)`
