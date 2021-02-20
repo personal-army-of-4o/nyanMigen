@@ -49,9 +49,16 @@ class nyanMigen:
 
     def fix(code):
         body = nyanMigen._getbody(code)
+        body = nyanMigen._add_module(body)
         body = nyanMigen._nyanify(body)
         nyanMigen._setbody(code, body)
         return code
+
+    def _add_module(code):
+        modcode = ast.parse("m = Module()")
+        modcode = modcode.body
+        modcode.extend(code)
+        return modcode
 
     def _getbody(code):
         return code.body[0].body
@@ -120,7 +127,8 @@ class nyanMigen:
 
     @converter
     def _convert_sync_assign(code, ctx):
-        (module, domain, target, value) = i = nyanMigen._parse_sync_assign(code)
+        (domain, target, value) = i = nyanMigen._parse_sync_assign(code)
+        module = nyanMigen._get_module(ctx)
         if nyanMigen._can_convert_sync_assign(i, ctx):
             return nyanMigen._dump_assign(module, domain, target, value)
         else:
@@ -134,9 +142,7 @@ class nyanMigen:
         return False
 
     def _can_convert_sync_assign(arg, ctx):
-        if (nyanMigen._is_type(arg[0], ctx, "Module()") and
-            nyanMigen._is_type(arg[2], ctx, "Signal()")
-        ):
+        if (nyanMigen._is_type(arg[1], ctx, "Signal()")):
             return True
         return False
 
@@ -156,11 +162,10 @@ class nyanMigen:
     def _parse_sync_assign(code):
         if isinstance(code, Assign):
             if len(code.targets) == 1:
-                module = code.targets[0].value.value.value.id
-                domain = code.targets[0].value.attr
+                domain = code.targets[0].value.id
                 target = code.targets[0].attr
                 value = code.value
-        return (module, domain, target, value)
+        return (domain, target, value)
 
     def _dump_assign(m, d, t, v):
         if not d:
