@@ -3,14 +3,12 @@ from nyanMigen import nyanify
 
 @nyanify
 class c:
-    def __init__(self):
-        pass
     def elaborate(self, platform):
-        self.o = a = Signal()
-        self.i1 = b = Signal()
-        self.i2 = c = Signal()
-        self.i3 = d = Signal()
-        self.i4 = f = Signal()
+        a = Signal()
+        b = Signal()
+        c = Signal()
+        d = Signal()
+        f = Signal()
         e = Signal()
 
         cc_flag0 = 1

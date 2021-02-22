@@ -6,13 +6,29 @@ from astunparse import unparse
 
 
 def nyanify(cls):
+    # elaborate
     code = nyanMigen.parse(cls.elaborate)
     print("```python\n" + unparse(code) + "\n```")
-    fixed_code = nyanMigen.fix(code)
+    (fixed_code, ctx) = nyanMigen.fix(code)
     fixed_code.body[0].decorator_list = []
     print("```python\n" + unparse(fixed_code) + "```")
     method = nyanMigen.compile(fixed_code)
     cls.elaborate = method
+    # ports
+    print("THIS IS A STUB")
+    ctx["a"]["is_driven"] = True
+    ctx["a"]["driver"] = False
+    method = nyanMigen.gen_ports(ctx)
+    print("```python\n" + unparse(method) + "```")
+    cls.ports = nyanMigen.compile(method)
+    # input ports
+    method = nyanMigen.gen_in_ports(ctx)
+    print("```python\n" + unparse(method) + "```")
+    cls.ports = nyanMigen.compile(method)
+    # output ports
+    method = nyanMigen.gen_out_ports(ctx)
+    print("```python\n" + unparse(method) + "```")
+    cls.ports = nyanMigen.compile(method)
     return cls
 
 converters = []
@@ -51,14 +67,33 @@ class nyanMigen:
         code = compile(filename="fakename", source=method, mode="exec")
         mod = {}
         exec(code, mod)
-        return mod["elaborate"]
+        return mod[method.body[0].name]
 
     def fix(code):
         body = nyanMigen._getbody(code)
         body = nyanMigen._add_module(body)
         (body, ctx) = nyanMigen._nyanify(body)
-        print(ctx)
         nyanMigen._setbody(code, body)
+        return (code, ctx)
+
+    def gen_ports(ctx):
+        return nyanMigen._gen_ports(ctx, "ports", nyanMigen._get_ports)
+
+    def gen_in_ports(ctx):
+        return nyanMigen._gen_ports(ctx, "inputs", nyanMigen._get_inputs)
+
+    def gen_out_ports(ctx):
+        return nyanMigen._gen_ports(ctx, "outputs", nyanMigen._get_outputs)
+
+    def _gen_ports(ctx, name, foo):
+        code = ast.parse("def " + name + "(self):\n   return [self.a]")
+        elts = []
+        ports = foo(ctx)
+        for i in ports:
+            add = ast.parse("self.t").body[0].value
+            add.attr = i
+            elts.append(add)
+        code.body[0].body[0].value.elts = elts
         return code
 
     def _add_module(code):
@@ -159,6 +194,29 @@ class nyanMigen:
                     (code.orelse, ctx) = nyanMigen._nyanify(code.orelse, ctx)
                 return code
 
+    def _get_ports(ctx):
+        ret = nyanMigen._get_inputs(ctx)
+        ret.extend(nyanMigen._get_outputs(ctx))
+        return ret
+
+    def _get_inputs(ctx):
+        ret = []
+        for i in ctx:
+            if nyanMigen._is_type(ctx, i, "Signal()"):
+                if ctx[i]["is_driven"] == False:
+                    if ctx[i]["driver"]:
+                        ret.append(i)
+        return ret
+
+    def _get_outputs(ctx):
+        ret = []
+        for i in ctx:
+            if nyanMigen._is_type(ctx, i, "Signal()"):
+                if ctx[i]["driver"] == False:
+                    if ctx[i]["is_driven"]:
+                        ret.append(i)
+        return ret
+
     def _add_drivers_to_ctx(drvs, ctx):
         if isinstance(drvs, list):
             for i in drvs:
@@ -178,6 +236,9 @@ class nyanMigen:
         if "type" in ctx[n]:
             print("warning: redefining type on", n)
         ctx[n]["type"] = v
+        if v == "Signal()":
+            ctx[n]["driver"] = False
+            ctx[n]["is_driven"] = False
 
     def _get_type(ctx, n):
         if n in ctx:

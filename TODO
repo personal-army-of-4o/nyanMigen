@@ -1,5 +1,4 @@
 generate hdl interface from circuit description
 3. parse assignments dependencies
-4. generate ports() method
 5. generate __init__ method
 6. generate executable section
