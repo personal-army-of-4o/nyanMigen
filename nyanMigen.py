@@ -149,6 +149,7 @@ class nyanMigen:
     def _convert_if(code, ctx):
         if isinstance(code, If):
             deps = nyanMigen._get_if_deps(code)
+            nyanMigen._add_drivers_to_ctx(deps, ctx)
             doit = nyanMigen._is_signal(deps, ctx)
             if doit:
                 return nyanMigen._gen_if_code(code, ctx)
@@ -157,6 +158,15 @@ class nyanMigen:
                 if len(code.orelse) > 0:
                     (code.orelse, ctx) = nyanMigen._nyanify(code.orelse, ctx)
                 return code
+
+    def _add_drivers_to_ctx(drvs, ctx):
+        if isinstance(drvs, list):
+            for i in drvs:
+                nyanMigen._add_drivers_to_ctx(i, ctx)
+        else:
+            if not drvs in ctx:
+                ctx[drvs] = {}
+            ctx[drvs]["driver"] = True
 
     def _get_if_deps(code):
         if isinstance(code.test, Name):
