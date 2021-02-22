@@ -56,7 +56,8 @@ class nyanMigen:
     def fix(code):
         body = nyanMigen._getbody(code)
         body = nyanMigen._add_module(body)
-        body = nyanMigen._nyanify(body)
+        (body, ctx) = nyanMigen._nyanify(body)
+        print(ctx)
         nyanMigen._setbody(code, body)
         return code
 
@@ -89,7 +90,7 @@ class nyanMigen:
                 ret.extend(i)
             else:
                 ret.append(i)
-        return ret
+        return (ret, ctx)
 
     @converter
     def _parse_signal(code, ctx):
@@ -102,7 +103,7 @@ class nyanMigen:
                 for i in code.targets:
                     if isinstance(i, Name):
                         if isinstance(i.ctx, Store):
-                            ctx[i.id] = "Signal()"
+                            nyanMigen._set_type(ctx, i.id, "Signal()")
 
     @converter
     def _parse_module(code, ctx):
@@ -116,7 +117,7 @@ class nyanMigen:
                 for i in code.targets:
                     if isinstance(i, Name):
                         if isinstance(i.ctx, Store):
-                            ctx[i.id] = "Module()"
+                            nyanMigen._set_type(ctx, i.id, "Module()")
 
     @converter
     def _convert_comb_assign(code, ctx):
@@ -131,7 +132,7 @@ class nyanMigen:
 
     def _get_module(ctx):
         for i in list(ctx.keys()):
-            if ctx[i] == "Module()":
+            if nyanMigen._is_type(ctx, i, "Module()"):
                 return i
         return None
 
@@ -147,19 +148,31 @@ class nyanMigen:
     @converter
     def _convert_if(code, ctx):
         if isinstance(code, If):
-            try:
-                deps = nyanMigen._get_if_deps(code)
-                doit = nyanMigen._is_signal(deps, ctx)
+            deps = nyanMigen._get_if_deps(code)
+            doit = nyanMigen._is_signal(deps, ctx)
+            if doit:
                 return nyanMigen._gen_if_code(code, ctx)
-            except:
-                code.body = nyanMigen._nyanify(code.body, ctx)
+            else:
+                (code.body, ctx) = nyanMigen._nyanify(code.body, ctx)
                 if len(code.orelse) > 0:
-                    code.orelse = nyanMigen._nyanify(code.orelse, ctx)
+                    (code.orelse, ctx) = nyanMigen._nyanify(code.orelse, ctx)
                 return code
 
     def _get_if_deps(code):
         if isinstance(code.test, Name):
             return [code.test.id]
+
+    def _set_type(ctx, n, v):
+        if not n in ctx:
+            ctx[n] = {}
+        if "type" in ctx[n]:
+            print("warning: redefining type on", n)
+        ctx[n]["type"] = v
+
+    def _get_type(ctx, n):
+        if n in ctx:
+            if "type" in ctx[n]:
+                return ctx[n]["type"]
 
     def _is_signal(v, ctx):
         if isinstance(v, list):
@@ -167,35 +180,34 @@ class nyanMigen:
                 if nyanMigen._is_signal(i, ctx):
                     return True
         else:
-            return ctx[v] == "Signal()"
+            return nyanMigen._get_type(ctx, v) == "Signal()"
         return False
 
     def _gen_if_code(code, ctx):
         ret = ast.parse("with m.If(cnd):\n    a = b").body[0]
         ret.items[0].context_expr.args[0] = code.test
-        ret.body = nyanMigen._nyanify(code.body, ctx)
+        (ret.body, ctx) = nyanMigen._nyanify(code.body, ctx)
         if len(code.orelse) > 0:
             elseast = ast.parse("with m.Else():\n    a = b").body[0]
-            elseast.body = nyanMigen._nyanify(code.orelse, ctx)
+            (elseast.body, ctx) = nyanMigen._nyanify(code.orelse, ctx)
             ret = [ret, elseast]
         return ret
 
     def _can_convert_comb_assign(arg, ctx):
         if (not isinstance(arg[1], Call) and
-            nyanMigen._is_type(arg[0], ctx, "Signal()")
+            nyanMigen._is_type(ctx, arg[0], "Signal()")
         ):
             return True
         return False
 
     def _can_convert_sync_assign(arg, ctx):
-        if (nyanMigen._is_type(arg[1], ctx, "Signal()")):
+        if (nyanMigen._is_type(ctx, arg[1], "Signal()")):
             return True
         return False
 
-    def _is_type(m, ctx, t):
+    def _is_type(ctx, m, t):
         if m in ctx:
-            if ctx[m] == t:
-                return True
+            return nyanMigen._get_type(ctx, m) == t
         return False
 
     def _parse_comb_assign(code):

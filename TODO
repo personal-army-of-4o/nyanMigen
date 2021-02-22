@@ -1,5 +1,4 @@
 generate hdl interface from circuit description
-1. change context format
 2. parse conditions dependencies
 3. parse assignments dependencies
 4. generate ports() method
