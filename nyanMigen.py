@@ -1,16 +1,16 @@
 import ast
 import inspect
-from ast import Assign, AugAssign, Name, Load, Store, Call
+from ast import Assign, AugAssign, Name, Load, Store, Call, If
 from pprintast import pprintast as ppa
 from astunparse import unparse
 
 
 def nyanify(cls):
     code = nyanMigen.parse(cls.elaborate)
-    print(unparse(code))
+    print("```python\n" + unparse(code) + "\n```")
     fixed_code = nyanMigen.fix(code)
     fixed_code.body[0].decorator_list = []
-    print(unparse(fixed_code))
+    print("```python\n" + unparse(fixed_code) + "```")
     method = nyanMigen.compile(fixed_code)
     cls.elaborate = method
     return cls
@@ -36,9 +36,15 @@ class nyanMigen:
                 indent += 1
         if indent > 0:
             for l in s.splitlines():
-                if l[0:indent-1] != s[:indent-1]:
-                    raise Exception("invalid code string")
-                ret += l[indent:] + "\n"
+                if len(l) > indent:
+                    if l[0:indent-1] != s[:indent-1]:
+                        raise Exception("invalid code string")
+                    ret += l[indent:] + "\n"
+                else:
+                    if l == ' '*len(l):
+                        pass
+                    else:
+                        raise Exception("invalid code string")
         return ret
 
     def compile(method):
@@ -66,8 +72,9 @@ class nyanMigen:
     def _setbody(code, body):
         code.body[0].body = body
 
-    def _nyanify(code):
-        ctx = {}
+    def _nyanify(code, ctx = None):
+        if not ctx:
+            ctx = {}
         ret = []
         for i in code:
             for f in converters:
@@ -78,7 +85,10 @@ class nyanMigen:
                         break
                 except Exception as e:
                     pass
-            ret.append(i)
+            if isinstance(i, list):
+                ret.extend(i)
+            else:
+                ret.append(i)
         return ret
 
     @converter
@@ -133,6 +143,42 @@ class nyanMigen:
             return nyanMigen._dump_assign(module, domain, target, value)
         else:
             raise Exception()
+
+    @converter
+    def _convert_if(code, ctx):
+        if isinstance(code, If):
+            try:
+                deps = nyanMigen._get_if_deps(code)
+                doit = nyanMigen._is_signal(deps, ctx)
+                return nyanMigen._gen_if_code(code, ctx)
+            except:
+                code.body = nyanMigen._nyanify(code.body, ctx)
+                if len(code.orelse) > 0:
+                    code.orelse = nyanMigen._nyanify(code.orelse, ctx)
+                return code
+
+    def _get_if_deps(code):
+        if isinstance(code.test, Name):
+            return [code.test.id]
+
+    def _is_signal(v, ctx):
+        if isinstance(v, list):
+            for i in v:
+                if nyanMigen._is_signal(i, ctx):
+                    return True
+        else:
+            return ctx[v] == "Signal()"
+        return False
+
+    def _gen_if_code(code, ctx):
+        ret = ast.parse("with m.If(cnd):\n    a = b").body[0]
+        ret.items[0].context_expr.args[0] = code.test
+        ret.body = nyanMigen._nyanify(code.body, ctx)
+        if len(code.orelse) > 0:
+            elseast = ast.parse("with m.Else():\n    a = b").body[0]
+            elseast.body = nyanMigen._nyanify(code.orelse, ctx)
+            ret = [ret, elseast]
+        return ret
 
     def _can_convert_comb_assign(arg, ctx):
         if (not isinstance(arg[1], Call) and
