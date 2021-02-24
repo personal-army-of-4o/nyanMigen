@@ -6,32 +6,22 @@ from astunparse import unparse
 
 
 def nyanify(cls):
-    # elaborate
-    code = nyanMigen.parse(cls.elaborate)
-    print("```python\n" + unparse(code) + "\n```")
-    (fixed_code, ctx) = nyanMigen.fix(code)
-    fixed_code.body[0].decorator_list = []
-    print("```python\n" + unparse(fixed_code))
-    method = nyanMigen.compile(fixed_code)
-    cls.elaborate = method
-    # ports
-    method = nyanMigen.gen_ports(ctx)
-    print(unparse(method))
-    cls.ports = nyanMigen.compile(method)
-    # input ports
-    method = nyanMigen.gen_in_ports(ctx)
-    print(unparse(method))
-    cls.inputs = nyanMigen.compile(method)
-    # output ports
-    method = nyanMigen.gen_out_ports(ctx)
-    print(unparse(method))
-    cls.outputs = nyanMigen.compile(method)
-    # __init__
-    method = nyanMigen.gen_init(ctx)
-    print(unparse(method) + "```")
-    cls.__init__ = nyanMigen.compile(method)
-    print(ctx)
-    return cls
+    cls_src = ast.parse(inspect.getsource(cls))
+    print("```python\n" + unparse(cls_src) + "\n```")
+    l = len(unparse(cls_src))
+    code = nyanMigen.parse(cls_src, "elaborate")
+    (elaborate, ctx) = nyanMigen.fix(code)
+    cls_src.body[0].decorator_list = []
+    ports = nyanMigen.gen_ports(ctx)
+    inputs = nyanMigen.gen_in_ports(ctx)
+    outputs = nyanMigen.gen_out_ports(ctx)
+    init = nyanMigen.gen_init(ctx)
+    e = nyanMigen.gen_exec(cls_src)
+    cls_src.body[0].body = [init, ports, inputs, outputs, elaborate]
+    cls_src.body.append(e)
+    print("```python\n" + unparse(cls_src) + "\n```")
+    print(l, "->", len(unparse(cls_src)))
+    return nyanMigen.compile(cls_src)
 
 converters = []
 def converter(foo):
@@ -39,44 +29,25 @@ def converter(foo):
     return foo
 
 class nyanMigen:
-    def parse(code):
-        code = inspect.getsource(code)
-        code = nyanMigen.unindent(code)
+    def parse(cls, fn):
+        code = None
+        for i in cls.body[0].body:
+            if i.name == fn:
+                code = i
+        if not code:
+            raise Exception("can't find `elaborate` method on class", cls.body[0].name)
         return ast.parse(code)
 
-    def unindent(s):
-        ret = ""
-        indent = 0;
-        for i in range(len(s)):
-            if s[i] != " ":
-                break
-            else:
-                indent += 1
-        if indent > 0:
-            for l in s.splitlines():
-                if len(l) > indent:
-                    if l[0:indent-1] != s[:indent-1]:
-                        raise Exception("invalid code string")
-                    ret += l[indent:] + "\n"
-                else:
-                    if l == ' '*len(l):
-                        pass
-                    else:
-                        raise Exception("invalid code string")
-        return ret
-
-    def compile(method):
-        code = compile(filename="fakename", source=method, mode="exec")
+    def compile(thing):
+        code = compile(filename="fakename", source=thing, mode="exec")
         mod = {}
         exec(code, mod)
-        return mod[method.body[0].name]
+        return mod[thing.body[0].name]
 
     def fix(code):
-        body = nyanMigen._getbody(code)
-        body = nyanMigen._add_module(body)
-        (body, ctx) = nyanMigen._nyanify(body)
-        nyanMigen._replace_ports_assigns(body, ctx)
-        nyanMigen._setbody(code, body)
+        nyanMigen._add_module(code)
+        (code.body, ctx) = nyanMigen._nyanify(code.body)
+        nyanMigen._replace_ports_assigns(code.body, ctx)
         return (code, ctx)
 
     def gen_ports(ctx):
@@ -89,14 +60,18 @@ class nyanMigen:
         return nyanMigen._gen_ports(ctx, "outputs", nyanMigen._get_outputs)
 
     def gen_init(ctx):
-        code = ast.parse("def __init__(self):\n    pass")
+        code = ast.parse("def __init__(self):\n    pass").body[0]
         body = []
         for i in nyanMigen._get_ports(ctx):
             add = ast.parse("self.a = Signal()").body[0]
             add.targets[0].attr = i
             body.append(add)
-        code.body[0].body = body
+        code.body = body
         return code
+
+    def gen_exec(cls):
+        code = ast.parse("if __name__ == \"__main__\":\n    top = " + cls.body[0].name + "()\n    main(top, top.ports())")
+        return code.body[0]
 
     def _replace_ports_assigns(body, ctx):
         ports = nyanMigen._get_ports(ctx)
@@ -112,27 +87,21 @@ class nyanMigen:
                 pass
 
     def _gen_ports(ctx, name, foo):
-        code = ast.parse("def " + name + "(self):\n   return [self.a]")
+        code = ast.parse("def " + name + "(self):\n   return [self.a]").body[0]
         elts = []
         ports = foo(ctx)
         for i in ports:
             add = ast.parse("self.t").body[0].value
             add.attr = i
             elts.append(add)
-        code.body[0].body[0].value.elts = elts
+        code.body[0].value.elts = elts
         return code
 
     def _add_module(code):
-        modcode = ast.parse("m = Module()")
-        modcode = modcode.body
-        modcode.extend(code)
-        return modcode
-
-    def _getbody(code):
-        return code.body[0].body
-
-    def _setbody(code, body):
-        code.body[0].body = body
+        modcode = ast.parse("m = Module()").body
+        modcode.extend(code.body)
+        code.body = modcode
+        return code
 
     def _nyanify(code, ctx = None):
         if not ctx:
