@@ -11,21 +11,25 @@ def nyanify(cls):
     print("```python\n" + unparse(code) + "\n```")
     (fixed_code, ctx) = nyanMigen.fix(code)
     fixed_code.body[0].decorator_list = []
-    print("```python\n" + unparse(fixed_code) + "```")
+    print("```python\n" + unparse(fixed_code))
     method = nyanMigen.compile(fixed_code)
     cls.elaborate = method
     # ports
     method = nyanMigen.gen_ports(ctx)
-    print("```python\n" + unparse(method) + "```")
+    print(unparse(method))
     cls.ports = nyanMigen.compile(method)
     # input ports
     method = nyanMigen.gen_in_ports(ctx)
-    print("```python\n" + unparse(method) + "```")
-    cls.ports = nyanMigen.compile(method)
+    print(unparse(method))
+    cls.inputs = nyanMigen.compile(method)
     # output ports
     method = nyanMigen.gen_out_ports(ctx)
-    print("```python\n" + unparse(method) + "```")
-    cls.ports = nyanMigen.compile(method)
+    print(unparse(method))
+    cls.outputs = nyanMigen.compile(method)
+    # __init__
+    method = nyanMigen.gen_init(ctx)
+    print(unparse(method) + "```")
+    cls.__init__ = nyanMigen.compile(method)
     print(ctx)
     return cls
 
@@ -71,6 +75,7 @@ class nyanMigen:
         body = nyanMigen._getbody(code)
         body = nyanMigen._add_module(body)
         (body, ctx) = nyanMigen._nyanify(body)
+        nyanMigen._replace_ports_assigns(body, ctx)
         nyanMigen._setbody(code, body)
         return (code, ctx)
 
@@ -82,6 +87,29 @@ class nyanMigen:
 
     def gen_out_ports(ctx):
         return nyanMigen._gen_ports(ctx, "outputs", nyanMigen._get_outputs)
+
+    def gen_init(ctx):
+        code = ast.parse("def __init__(self):\n    pass")
+        body = []
+        for i in nyanMigen._get_ports(ctx):
+            add = ast.parse("self.a = Signal()").body[0]
+            add.targets[0].attr = i
+            body.append(add)
+        code.body[0].body = body
+        return code
+
+    def _replace_ports_assigns(body, ctx):
+        ports = nyanMigen._get_ports(ctx)
+        for n in range(len(body)):
+            i = body[n]
+            try:
+                if isinstance(i, Assign) and len(i.targets) == 1 and i.targets[0].id in ports:
+                    add = ast.parse("a = self.a").body[0]
+                    add.targets[0].id = i.targets[0].id
+                    add.value.attr  = i.targets[0].id
+                    body[n] = add
+            except:
+                pass
 
     def _gen_ports(ctx, name, foo):
         code = ast.parse("def " + name + "(self):\n   return [self.a]")
