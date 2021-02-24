@@ -15,9 +15,6 @@ def nyanify(cls):
     method = nyanMigen.compile(fixed_code)
     cls.elaborate = method
     # ports
-    print("THIS IS A STUB")
-    ctx["a"]["is_driven"] = True
-    ctx["a"]["driver"] = False
     method = nyanMigen.gen_ports(ctx)
     print("```python\n" + unparse(method) + "```")
     cls.ports = nyanMigen.compile(method)
@@ -29,6 +26,7 @@ def nyanify(cls):
     method = nyanMigen.gen_out_ports(ctx)
     print("```python\n" + unparse(method) + "```")
     cls.ports = nyanMigen.compile(method)
+    print(ctx)
     return cls
 
 converters = []
@@ -161,6 +159,8 @@ class nyanMigen:
         if not module:
             return
         if nyanMigen._can_convert_comb_assign(i, ctx):
+            nyanMigen._parse_assign_deps(value, ctx)
+            nyanMigen._add_target(target, ctx)
             return nyanMigen._dump_assign(module, None, target, value)
         else:
             raise Exception()
@@ -176,6 +176,8 @@ class nyanMigen:
         (domain, target, value) = i = nyanMigen._parse_sync_assign(code)
         module = nyanMigen._get_module(ctx)
         if nyanMigen._can_convert_sync_assign(i, ctx):
+            nyanMigen._parse_assign_deps(value, ctx)
+            nyanMigen._add_target(target, ctx)
             return nyanMigen._dump_assign(module, domain, target, value)
         else:
             raise Exception()
@@ -193,6 +195,26 @@ class nyanMigen:
                 if len(code.orelse) > 0:
                     (code.orelse, ctx) = nyanMigen._nyanify(code.orelse, ctx)
                 return code
+
+    def _add_target(target, ctx):
+        if target in ctx:
+            if nyanMigen._is_type(ctx, target, "Signal()"):
+                ctx[target]["is_driven"] = True
+
+    def _parse_assign_deps(value, ctx):
+        if isinstance(value, list):
+            for i in value:
+                nyanMigen._parse_assign_deps(i, ctx)
+        else:
+            try:
+                if nyanMigen._is_type(ctx, value.id, "Signal()") and isinstance(value.ctx, Load):
+                    ctx[value.id]["driver"] = True
+            except:
+                try:
+                    for i in value.__dict__.keys():
+                        nyanMigen._parse_assign_deps(getattr(value, i), ctx)
+                except Exception as e:
+                    pass
 
     def _get_ports(ctx):
         ret = nyanMigen._get_inputs(ctx)
