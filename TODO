@@ -1,0 +1,5 @@
+add parameters
+1. parse dependencies from `Signal()` args
+2. get the list of uninitialized dependencies
+3. add generics to elaborate
+4. add generics to __init__() args
