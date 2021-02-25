@@ -6,15 +6,14 @@ from nyanMigen import nyanify
 @nyanify
 class c:
     def elaborate(self, platform):
-        a = Signal(8)
+        a = Signal(w)
         b = Signal()
         c = Signal()
-        d = Signal(8)
+        d = Signal(w)
         f = Signal()
         e = Signal()
 
         cc_flag0 = 1
-        cc_flag1 = 1
 
         if cc_flag0:
             if f | f:

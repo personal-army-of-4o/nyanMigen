@@ -21,6 +21,8 @@ def nyanify(cls):
     cls_src.body.append(e)
     print("```python\n" + unparse(cls_src) + "\n```")
     print(l, "->", len(unparse(cls_src)))
+    for i in ctx:
+        print(i, ctx[i])
     return nyanMigen.compile(cls_src)
 
 converters = []
@@ -117,6 +119,12 @@ class nyanMigen:
         for i in code:
             for f in converters:
                 try:
+                    if isinstance(i, Assign):
+                        for j in i.targets:
+                            try:
+                                nyanMigen._set_to_initialized(j.id, ctx)
+                            except:
+                                pass
                     ii = f(i, ctx)
                     if ii:
                         i = ii
@@ -141,6 +149,7 @@ class nyanMigen:
                     if isinstance(i, Name):
                         if isinstance(i.ctx, Store):
                             nyanMigen._set_type(ctx, i.id, "Signal()", code.value.args)
+                            nyanMigen._parse_deps(code.value.args, ctx)
 
     @converter
     def _parse_module(code, ctx):
@@ -212,9 +221,13 @@ class nyanMigen:
                 ret.extend(nyanMigen._parse_deps(i, ctx))
         else:
             try:
-                if nyanMigen._is_type(ctx, value.id, "Signal()") and isinstance(value.ctx, Load):
+                if isinstance(value.ctx, Load):
+                    if value.id not in ctx:
+                        ctx[value.id] = {}
                     ctx[value.id]["driver"] = True
                     ret.append(value.id)
+                    if nyanMigen._get_type(ctx, value.id) == None:
+                        nyanMigen._set_type(ctx, value.id, "other")
             except:
                 try:
                     for i in value.__dict__.keys():
@@ -255,13 +268,18 @@ class nyanMigen:
                 ctx[drvs] = {}
             ctx[drvs]["driver"] = True
 
+    def _set_to_initialized(n, ctx):
+        if n not in ctx:
+            ctx[n] = {}
+        ctx[n]["initialized"] = True
+
     def _set_type(ctx, n, v, args = None):
         if not n in ctx:
             ctx[n] = {}
         if "type" in ctx[n]:
             print("warning: redefining type on", n)
         ctx[n]["type"] = v
-        if v == "Signal()":
+        if v != "Module()":
             ctx[n]["driver"] = False
             ctx[n]["is_driven"] = False
             ctx[n]["args"] = args
