@@ -17,7 +17,7 @@ class c:
         cc_flag1 = 1
 
         if cc_flag0:
-            if f:
+            if f | f:
                 e = b | c
             else:
                 e = b & c

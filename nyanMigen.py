@@ -163,7 +163,7 @@ class nyanMigen:
         if not module:
             return
         if nyanMigen._can_convert_comb_assign(i, ctx):
-            nyanMigen._parse_assign_deps(value, ctx)
+            nyanMigen._parse_deps(value, ctx)
             nyanMigen._add_target(target, ctx)
             return nyanMigen._dump_assign(module, None, target, value)
         else:
@@ -180,7 +180,7 @@ class nyanMigen:
         (domain, target, value) = i = nyanMigen._parse_sync_assign(code)
         module = nyanMigen._get_module(ctx)
         if nyanMigen._can_convert_sync_assign(i, ctx):
-            nyanMigen._parse_assign_deps(value, ctx)
+            nyanMigen._parse_deps(value, ctx)
             nyanMigen._add_target(target, ctx)
             return nyanMigen._dump_assign(module, domain, target, value)
         else:
@@ -189,7 +189,7 @@ class nyanMigen:
     @converter
     def _convert_if(code, ctx):
         if isinstance(code, If):
-            deps = nyanMigen._get_if_deps(code)
+            deps = nyanMigen._parse_deps(code.test, ctx)
             nyanMigen._add_drivers_to_ctx(deps, ctx)
             doit = nyanMigen._is_signal(deps, ctx)
             if doit:
@@ -205,20 +205,23 @@ class nyanMigen:
             if nyanMigen._is_type(ctx, target, "Signal()"):
                 ctx[target]["is_driven"] = True
 
-    def _parse_assign_deps(value, ctx):
+    def _parse_deps(value, ctx):
+        ret = []
         if isinstance(value, list):
             for i in value:
-                nyanMigen._parse_assign_deps(i, ctx)
+                ret.extend(nyanMigen._parse_deps(i, ctx))
         else:
             try:
                 if nyanMigen._is_type(ctx, value.id, "Signal()") and isinstance(value.ctx, Load):
                     ctx[value.id]["driver"] = True
+                    ret.append(value.id)
             except:
                 try:
                     for i in value.__dict__.keys():
-                        nyanMigen._parse_assign_deps(getattr(value, i), ctx)
+                        ret.extend(nyanMigen._parse_deps(getattr(value, i), ctx))
                 except Exception as e:
                     pass
+        return ret
 
     def _get_ports(ctx):
         ret = nyanMigen._get_inputs(ctx)
@@ -251,10 +254,6 @@ class nyanMigen:
             if not drvs in ctx:
                 ctx[drvs] = {}
             ctx[drvs]["driver"] = True
-
-    def _get_if_deps(code):
-        if isinstance(code.test, Name):
-            return [code.test.id]
 
     def _set_type(ctx, n, v, args = None):
         if not n in ctx:
