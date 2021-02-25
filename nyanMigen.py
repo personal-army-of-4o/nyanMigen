@@ -51,6 +51,7 @@ class nyanMigen:
         (code.body, ctx) = nyanMigen._nyanify(code.body)
         nyanMigen._replace_ports_assigns(code.body, ctx)
         nyanMigen._add_return_module(code.body)
+        nyanMigen._add_generics_to_elaborate(code, ctx)
         return (code, ctx)
 
     def gen_ports(ctx):
@@ -77,6 +78,15 @@ class nyanMigen:
     def gen_exec(cls):
         code = ast.parse("if __name__ == \"__main__\":\n    top = " + cls.body[0].name + "()\n    main(top, top.ports())")
         return code.body[0]
+
+    def _add_generics_to_elaborate(body, ctx):
+        generics = []
+        for i in ctx:
+            if nyanMigen._is_type(ctx, i, "other") and not nyanMigen._is_initialized(ctx, i):
+                add = ast.parse(i + " = self." + i).body[0]
+                generics.append(add)
+        generics.extend(body.body)
+        body.body = generics
 
     def _add_return_module(code):
         add = ast.parse("return m").body[0]
@@ -272,6 +282,12 @@ class nyanMigen:
         if n not in ctx:
             ctx[n] = {}
         ctx[n]["initialized"] = True
+
+    def _is_initialized(ctx, n):
+        try:
+            return ctx[n]["initialized"]
+        except:
+            return False
 
     def _set_type(ctx, n, v, args = None):
         if not n in ctx:
