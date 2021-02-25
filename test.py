@@ -1,3 +1,5 @@
+from nmigen import *
+from nmigen.cli import main
 from nyanMigen import nyanify
 
 
