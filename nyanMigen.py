@@ -48,6 +48,7 @@ class nyanMigen:
         nyanMigen._add_module(code)
         (code.body, ctx) = nyanMigen._nyanify(code.body)
         nyanMigen._replace_ports_assigns(code.body, ctx)
+        nyanMigen._add_return_module(code.body)
         return (code, ctx)
 
     def gen_ports(ctx):
@@ -65,6 +66,8 @@ class nyanMigen:
         for i in nyanMigen._get_ports(ctx):
             add = ast.parse("self.a = Signal()").body[0]
             add.targets[0].attr = i
+            if ctx[i]["args"]:
+                add.value.args = ctx[i]["args"]
             body.append(add)
         code.body = body
         return code
@@ -72,6 +75,10 @@ class nyanMigen:
     def gen_exec(cls):
         code = ast.parse("if __name__ == \"__main__\":\n    top = " + cls.body[0].name + "()\n    main(top, top.ports())")
         return code.body[0]
+
+    def _add_return_module(code):
+        add = ast.parse("return m").body[0]
+        code.append(add)
 
     def _replace_ports_assigns(body, ctx):
         ports = nyanMigen._get_ports(ctx)
@@ -133,7 +140,7 @@ class nyanMigen:
                 for i in code.targets:
                     if isinstance(i, Name):
                         if isinstance(i.ctx, Store):
-                            nyanMigen._set_type(ctx, i.id, "Signal()")
+                            nyanMigen._set_type(ctx, i.id, "Signal()", code.value.args)
 
     @converter
     def _parse_module(code, ctx):
@@ -248,7 +255,7 @@ class nyanMigen:
                 ctx[drvs] = {}
             ctx[drvs]["driver"] = True
 
-    def _set_type(ctx, n, v):
+    def _set_type(ctx, n, v, args = None):
         if not n in ctx:
             ctx[n] = {}
         if "type" in ctx[n]:
@@ -257,6 +264,7 @@ class nyanMigen:
         if v == "Signal()":
             ctx[n]["driver"] = False
             ctx[n]["is_driven"] = False
+            ctx[n]["args"] = args
 
     def _get_type(ctx, n):
         if n in ctx:
