@@ -48,6 +48,7 @@ class nyanMigen:
         nyanMigen._add_module(code)
         (code.body, ctx) = nyanMigen._nyanify(code.body)
         nyanMigen._replace_ports_assigns(code.body, ctx)
+        nyanMigen._add_return_module(code.body)
         return (code, ctx)
 
     def gen_ports(ctx):
@@ -74,6 +75,10 @@ class nyanMigen:
     def gen_exec(cls):
         code = ast.parse("if __name__ == \"__main__\":\n    top = " + cls.body[0].name + "()\n    main(top, top.ports())")
         return code.body[0]
+
+    def _add_return_module(code):
+        add = ast.parse("return m").body[0]
+        code.append(add)
 
     def _replace_ports_assigns(body, ctx):
         ports = nyanMigen._get_ports(ctx)
