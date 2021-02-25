@@ -64,8 +64,14 @@ class nyanMigen:
         return nyanMigen._gen_ports(ctx, "outputs", nyanMigen._get_outputs)
 
     def gen_init(ctx):
-        code = ast.parse("def __init__(self):\n    pass").body[0]
-        body = []
+        gnames = nyanMigen._get_generics(ctx) 
+        args_string = ""
+        generics = []
+        for i in gnames:
+            args_string += ", " + i
+            generics.append(ast.parse("self." + i + " = " + i).body[0])
+        code = ast.parse("def __init__(self" + args_string + "):\n    pass").body[0]
+        body = generics
         for i in nyanMigen._get_ports(ctx):
             add = ast.parse("self.a = Signal()").body[0]
             add.targets[0].attr = i
@@ -81,12 +87,19 @@ class nyanMigen:
 
     def _add_generics_to_elaborate(body, ctx):
         generics = []
-        for i in ctx:
-            if nyanMigen._is_type(ctx, i, "other") and not nyanMigen._is_initialized(ctx, i):
-                add = ast.parse(i + " = self." + i).body[0]
-                generics.append(add)
+        gnames = nyanMigen._get_generics(ctx) 
+        for i in gnames:
+            add = ast.parse(i + " = self." + i).body[0]
+            generics.append(add)
         generics.extend(body.body)
         body.body = generics
+
+    def _get_generics(ctx):
+        generics = []
+        for i in ctx:
+            if nyanMigen._is_type(ctx, i, "other") and not nyanMigen._is_initialized(ctx, i):
+                generics.append(i)
+        return generics
 
     def _add_return_module(code):
         add = ast.parse("return m").body[0]

@@ -1,29 +1,81 @@
-to run the test: `python3 test.py`
+to test: `python3 test.py`
 
-example conversion
+example conversion:
+```python
 
-original:
-```python
-@nyanify
-class c:
-    def __init__(self):
-        pass
+class c():
+
     def elaborate(self, platform):
-        m = Module()
-        self.o = a = Signal()
-        self.i1 = b = Signal()
-        self.i2 = c = Signal()
-        m.d.sync.a = b | c
-```
-generated:
+        a = Signal(w)
+        b = Signal()
+        c = Signal()
+        d = Signal(w)
+        f = Signal()
+        e = Signal()
+        cc_flag0 = 1
+        if cc_flag0:
+            if (f | f):
+                e = (b | c)
+            else:
+                e = (b & c)
+        elif cc_flag1:
+            if f:
+                e = (b | c)
+            else:
+                e = (b & c)
+        sync.a = (d + e)
+
+``` 
+->
 ```python
-class c:
-    def __init__(self):
-        pass
+
+
+class c():
+
+    def __init__(self, w, cc_flag1):
+        self.w = w
+        self.cc_flag1 = cc_flag1
+        self.b = Signal()
+        self.c = Signal()
+        self.d = Signal(w)
+        self.f = Signal()
+        self.a = Signal(w)
+
+    def ports(self):
+        return [self.b, self.c, self.d, self.f, self.a]
+
+    def inputs(self):
+        return [self.b, self.c, self.d, self.f]
+
+    def outputs(self):
+        return [self.a]
+
     def elaborate(self, platform):
+        w = self.w
+        cc_flag1 = self.cc_flag1
         m = Module()
-        self.o = a = Signal()
-        self.i1 = b = Signal()
-        self.i2 = c = Signal()
-        m.d.sync += a.eq(b | c)
+        a = self.a
+        b = self.b
+        c = self.c
+        d = self.d
+        f = self.f
+        e = Signal()
+        cc_flag0 = 1
+        if cc_flag0:
+            with m.If((f | f)):
+                m.d.comb += e.eq((b | c))
+            with m.Else():
+                m.d.comb += e.eq((b & c))
+        elif cc_flag1:
+            with m.If(f):
+                m.d.comb += e.eq((b | c))
+            with m.Else():
+                m.d.comb += e.eq((b & c))
+        m.d.sync += a.eq((d + e))
+        return m
+if (__name__ == '__main__'):
+    top = c()
+    main(top, top.ports())
+
 ```
+457 chars -> 1123 chars
