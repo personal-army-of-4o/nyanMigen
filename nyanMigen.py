@@ -65,6 +65,8 @@ class nyanMigen:
         for i in nyanMigen._get_ports(ctx):
             add = ast.parse("self.a = Signal()").body[0]
             add.targets[0].attr = i
+            if ctx[i]["args"]:
+                add.value.args = ctx[i]["args"]
             body.append(add)
         code.body = body
         return code
@@ -133,7 +135,7 @@ class nyanMigen:
                 for i in code.targets:
                     if isinstance(i, Name):
                         if isinstance(i.ctx, Store):
-                            nyanMigen._set_type(ctx, i.id, "Signal()")
+                            nyanMigen._set_type(ctx, i.id, "Signal()", code.value.args)
 
     @converter
     def _parse_module(code, ctx):
@@ -249,7 +251,7 @@ class nyanMigen:
         if isinstance(code.test, Name):
             return [code.test.id]
 
-    def _set_type(ctx, n, v):
+    def _set_type(ctx, n, v, args = None):
         if not n in ctx:
             ctx[n] = {}
         if "type" in ctx[n]:
@@ -258,6 +260,7 @@ class nyanMigen:
         if v == "Signal()":
             ctx[n]["driver"] = False
             ctx[n]["is_driven"] = False
+            ctx[n]["args"] = args
 
     def _get_type(ctx, n):
         if n in ctx:
