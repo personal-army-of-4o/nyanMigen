@@ -5,23 +5,25 @@ from pprintast import pprintast as ppa
 from astunparse import unparse
 
 
-def nyanify(cls):
-    cls_src = ast.parse(inspect.getsource(cls))
-    print("```python\n" + unparse(cls_src) + "\n```")
-    l = len(unparse(cls_src))
-    code = nyanMigen.parse(cls_src, "elaborate")
-    (elaborate, ctx) = nyanMigen.fix(code)
-    cls_src.body[0].decorator_list = []
-    ports = nyanMigen.gen_ports(ctx)
-    inputs = nyanMigen.gen_in_ports(ctx)
-    outputs = nyanMigen.gen_out_ports(ctx)
-    init = nyanMigen.gen_init(ctx)
-    e = nyanMigen.gen_exec(cls_src)
-    cls_src.body[0].body = [init, ports, inputs, outputs, elaborate]
-    cls_src.body.append(e)
-    print("```python\n" + unparse(cls_src) + "\n```")
-    print(l, "->", len(unparse(cls_src)))
-    return nyanMigen.compile(cls_src)
+def nyanify(generics_file = None):
+    def foo(cls):
+        cls_str = inspect.getsource(cls)
+        cls_src = ast.parse(cls_str)
+        print("```python\n" + cls_str + "\n```")
+        l = len(unparse(cls_src))
+        code = nyanMigen.parse(cls_src, "elaborate")
+        (elaborate, ctx) = nyanMigen.fix(code)
+        ports = nyanMigen.gen_ports(ctx)
+        inputs = nyanMigen.gen_in_ports(ctx)
+        outputs = nyanMigen.gen_out_ports(ctx)
+        init = nyanMigen.gen_init(ctx)
+        e = nyanMigen.gen_exec(cls_src, ctx, generics_file)
+        cls_src.body[0].body = [init, ports, inputs, outputs, elaborate]
+        cls_src.body.append(e)
+        print(" ->\n```python\n" + unparse(cls_src) + "\n```")
+        print(l, "chars ->", len(unparse(cls_src)), "chars")
+        return nyanMigen.compile(cls_src)
+    return foo
 
 converters = []
 def converter(foo):
@@ -49,6 +51,7 @@ class nyanMigen:
         (code.body, ctx) = nyanMigen._nyanify(code.body)
         nyanMigen._replace_ports_assigns(code.body, ctx)
         nyanMigen._add_return_module(code.body)
+        nyanMigen._add_generics_to_elaborate(code, ctx)
         return (code, ctx)
 
     def gen_ports(ctx):
@@ -61,8 +64,14 @@ class nyanMigen:
         return nyanMigen._gen_ports(ctx, "outputs", nyanMigen._get_outputs)
 
     def gen_init(ctx):
-        code = ast.parse("def __init__(self):\n    pass").body[0]
-        body = []
+        gnames = nyanMigen._get_generics(ctx) 
+        args_string = ""
+        generics = []
+        for i in gnames:
+            args_string += ", " + i
+            generics.append(ast.parse("self." + i + " = " + i).body[0])
+        code = ast.parse("def __init__(self" + args_string + "):\n    pass").body[0]
+        body = generics
         for i in nyanMigen._get_ports(ctx):
             add = ast.parse("self.a = Signal()").body[0]
             add.targets[0].attr = i
@@ -72,9 +81,47 @@ class nyanMigen:
         code.body = body
         return code
 
-    def gen_exec(cls):
-        code = ast.parse("if __name__ == \"__main__\":\n    top = " + cls.body[0].name + "()\n    main(top, top.ports())")
+    def gen_exec(cls, ctx, generics_file):
+        generics_str = ""
+        args_str = ""
+        generics = nyanMigen._get_generics(ctx)
+        if len(generics) > 0 and generics_file:
+            generics_str = (
+                "    import json\n" +
+                "    with open('" + generics_file + "', 'r') as read_file:\n" +
+                "        generics = json.load(read_file)\n"
+            )
+            first = True
+            for i in generics:
+                if first:
+                    args_str += "generics." + i
+                    first = False
+                else:
+                    args_str += ", generics." + i
+        str = (
+            "if __name__ == \"__main__\":\n" +
+            generics_str +
+            "    top = " + cls.body[0].name + "(" + args_str + ")\n" +
+            "    main(top, top.ports())"
+        )
+        code = ast.parse(str)
         return code.body[0]
+
+    def _add_generics_to_elaborate(body, ctx):
+        generics = []
+        gnames = nyanMigen._get_generics(ctx) 
+        for i in gnames:
+            add = ast.parse(i + " = self." + i).body[0]
+            generics.append(add)
+        generics.extend(body.body)
+        body.body = generics
+
+    def _get_generics(ctx):
+        generics = []
+        for i in ctx:
+            if nyanMigen._is_type(ctx, i, "other") and not nyanMigen._is_initialized(ctx, i):
+                generics.append(i)
+        return generics
 
     def _add_return_module(code):
         add = ast.parse("return m").body[0]
@@ -117,6 +164,12 @@ class nyanMigen:
         for i in code:
             for f in converters:
                 try:
+                    if isinstance(i, Assign):
+                        for j in i.targets:
+                            try:
+                                nyanMigen._set_to_initialized(j.id, ctx)
+                            except:
+                                pass
                     ii = f(i, ctx)
                     if ii:
                         i = ii
@@ -141,6 +194,7 @@ class nyanMigen:
                     if isinstance(i, Name):
                         if isinstance(i.ctx, Store):
                             nyanMigen._set_type(ctx, i.id, "Signal()", code.value.args)
+                            nyanMigen._parse_deps(code.value.args, ctx)
 
     @converter
     def _parse_module(code, ctx):
@@ -212,9 +266,13 @@ class nyanMigen:
                 ret.extend(nyanMigen._parse_deps(i, ctx))
         else:
             try:
-                if nyanMigen._is_type(ctx, value.id, "Signal()") and isinstance(value.ctx, Load):
+                if isinstance(value.ctx, Load):
+                    if value.id not in ctx:
+                        ctx[value.id] = {}
                     ctx[value.id]["driver"] = True
                     ret.append(value.id)
+                    if nyanMigen._get_type(ctx, value.id) == None:
+                        nyanMigen._set_type(ctx, value.id, "other")
             except:
                 try:
                     for i in value.__dict__.keys():
@@ -255,13 +313,24 @@ class nyanMigen:
                 ctx[drvs] = {}
             ctx[drvs]["driver"] = True
 
+    def _set_to_initialized(n, ctx):
+        if n not in ctx:
+            ctx[n] = {}
+        ctx[n]["initialized"] = True
+
+    def _is_initialized(ctx, n):
+        try:
+            return ctx[n]["initialized"]
+        except:
+            return False
+
     def _set_type(ctx, n, v, args = None):
         if not n in ctx:
             ctx[n] = {}
         if "type" in ctx[n]:
             print("warning: redefining type on", n)
         ctx[n]["type"] = v
-        if v == "Signal()":
+        if v != "Module()":
             ctx[n]["driver"] = False
             ctx[n]["is_driven"] = False
             ctx[n]["args"] = args
