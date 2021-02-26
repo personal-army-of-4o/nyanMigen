@@ -1,41 +1,42 @@
 ```python
-
-
-class c():
-
+class c:
     def elaborate(self, platform):
-        a = Signal(8)
+        a = Signal(w)
         b = Signal()
         c = Signal()
-        d = Signal(8)
+        d = Signal(w)
         f = Signal()
         e = Signal()
+
         cc_flag0 = 1
-        cc_flag1 = 1
+
         if cc_flag0:
-            if (f | f):
-                e = (b | c)
+            if f | f:
+                e = b | c
             else:
-                e = (b & c)
+                e = b & c
         elif cc_flag1:
             if f:
-                e = (b | c)
+                e = b | c
             else:
-                e = (b & c)
-        sync.a = (d + e)
+                e = b & c
+        sync.a = d + e
 
 ```
+ ->
 ```python
 
 
 class c():
 
-    def __init__(self):
+    def __init__(self, w, cc_flag1):
+        self.w = w
+        self.cc_flag1 = cc_flag1
         self.b = Signal()
         self.c = Signal()
-        self.d = Signal(8)
+        self.d = Signal(w)
         self.f = Signal()
-        self.a = Signal(8)
+        self.a = Signal(w)
 
     def ports(self):
         return [self.b, self.c, self.d, self.f, self.a]
@@ -47,6 +48,8 @@ class c():
         return [self.a]
 
     def elaborate(self, platform):
+        w = self.w
+        cc_flag1 = self.cc_flag1
         from nmigen import Module, Signal, If, Else
         m = Module()
         a = self.a
@@ -56,7 +59,6 @@ class c():
         f = self.f
         e = Signal()
         cc_flag0 = 1
-        cc_flag1 = 1
         if cc_flag0:
             with m.If((f | f)):
                 m.d.comb += e.eq((b | c))
@@ -70,9 +72,12 @@ class c():
         m.d.sync += a.eq((d + e))
         return m
 if (__name__ == '__main__'):
-    top = c()
-    from nmigen.cli import main
+    import json
+    with open('generics.json', 'r') as read_file:
+        generics = json.load(read_file)
+    top = c(generics.w, generics.cc_flag1)
+    from nMigen.cli import main
     main(top, top.ports())
 
 ```
-478 -> 1111
+457 chars -> 1342 chars
