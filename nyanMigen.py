@@ -47,6 +47,7 @@ class nyanMigen:
     def fix(code):
         nyanMigen._add_module(code)
         (code.body, ctx) = nyanMigen._nyanify(code.body)
+        nyanMigen._add_elab_imports(code)
         nyanMigen._replace_ports_assigns(code.body, ctx)
         nyanMigen._add_return_module(code.body)
         return (code, ctx)
@@ -73,8 +74,18 @@ class nyanMigen:
         return code
 
     def gen_exec(cls):
-        code = ast.parse("if __name__ == \"__main__\":\n    top = " + cls.body[0].name + "()\n    main(top, top.ports())")
+        code = ast.parse(
+            "if __name__ == \"__main__\":\n" +
+            "    top = " + cls.body[0].name + "()\n" +
+            "    from nmigen.cli import main\n" +
+            "    main(top, top.ports())\n"
+        )
         return code.body[0]
+
+    def _add_elab_imports(code):
+        add = ast.parse("from nmigen import Module, Signal, If, Else").body
+        add.extend(code.body)
+        code.body = add
 
     def _add_return_module(code):
         add = ast.parse("return m").body[0]
