@@ -5,25 +5,25 @@ from pprintast import pprintast as ppa
 from astunparse import unparse
 
 
-def nyanify(cls):
-    cls_src = ast.parse(inspect.getsource(cls))
-    print("```python\n" + unparse(cls_src) + "\n```")
-    l = len(unparse(cls_src))
-    code = nyanMigen.parse(cls_src, "elaborate")
-    (elaborate, ctx) = nyanMigen.fix(code)
-    cls_src.body[0].decorator_list = []
-    ports = nyanMigen.gen_ports(ctx)
-    inputs = nyanMigen.gen_in_ports(ctx)
-    outputs = nyanMigen.gen_out_ports(ctx)
-    init = nyanMigen.gen_init(ctx)
-    e = nyanMigen.gen_exec(cls_src)
-    cls_src.body[0].body = [init, ports, inputs, outputs, elaborate]
-    cls_src.body.append(e)
-    print("```python\n" + unparse(cls_src) + "\n```")
-    print(l, "->", len(unparse(cls_src)))
-    for i in ctx:
-        print(i, ctx[i])
-    return nyanMigen.compile(cls_src)
+def nyanify(generics_file = None):
+    def foo(cls):
+        cls_str = inspect.getsource(cls)
+        cls_src = ast.parse(cls_str)
+        print("```python\n" + cls_str + "\n```")
+        l = len(unparse(cls_src))
+        code = nyanMigen.parse(cls_src, "elaborate")
+        (elaborate, ctx) = nyanMigen.fix(code)
+        ports = nyanMigen.gen_ports(ctx)
+        inputs = nyanMigen.gen_in_ports(ctx)
+        outputs = nyanMigen.gen_out_ports(ctx)
+        init = nyanMigen.gen_init(ctx)
+        e = nyanMigen.gen_exec(cls_src, ctx, generics_file)
+        cls_src.body[0].body = [init, ports, inputs, outputs, elaborate]
+        cls_src.body.append(e)
+        print(" ->\n```python\n" + unparse(cls_src) + "\n```")
+        print(l, "chars ->", len(unparse(cls_src)), "chars")
+        return nyanMigen.compile(cls_src)
+    return foo
 
 converters = []
 def converter(foo):
@@ -81,8 +81,30 @@ class nyanMigen:
         code.body = body
         return code
 
-    def gen_exec(cls):
-        code = ast.parse("if __name__ == \"__main__\":\n    top = " + cls.body[0].name + "()\n    main(top, top.ports())")
+    def gen_exec(cls, ctx, generics_file):
+        generics_str = ""
+        args_str = ""
+        generics = nyanMigen._get_generics(ctx)
+        if len(generics) > 0 and generics_file:
+            generics_str = (
+                "    import json\n" +
+                "    with open('" + generics_file + "', 'r') as read_file:\n" +
+                "        generics = json.load(read_file)\n"
+            )
+            first = True
+            for i in generics:
+                if first:
+                    args_str += "generics." + i
+                    first = False
+                else:
+                    args_str += ", generics." + i
+        str = (
+            "if __name__ == \"__main__\":\n" +
+            generics_str +
+            "    top = " + cls.body[0].name + "(" + args_str + ")\n" +
+            "    main(top, top.ports())"
+        )
+        code = ast.parse(str)
         return code.body[0]
 
     def _add_generics_to_elaborate(body, ctx):

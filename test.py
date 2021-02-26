@@ -3,7 +3,7 @@ from nmigen.cli import main
 from nyanMigen import nyanify
 
 
-@nyanify
+@nyanify(generics_file="generics.json")
 class c:
     def elaborate(self, platform):
         a = Signal(w)
