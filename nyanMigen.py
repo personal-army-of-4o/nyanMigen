@@ -39,6 +39,19 @@ class nyanStatistics:
         self.statistics["inputs(" + str(len(nyanMigen._get_inputs(ctx))) +")"] = list(map(foo, nyanMigen._get_inputs(ctx)))
         self.statistics["outputs(" + str(len(nyanMigen._get_outputs(ctx))) + ")"] = list(map(foo, nyanMigen._get_outputs(ctx)))
         self.statistics["generics(" + str(len(nyanMigen._get_generics(ctx))) + ")"] = nyanMigen._get_generics(ctx)
+        self.statistics["domains(" + str(len(self.domains(ctx))) + ")"] = self.domains(ctx)
+
+    def domains(self, ctx):
+        dl = []
+        for i in ctx:
+            try:
+                d = ctx[i]["domain"]
+                if d:
+                    if d not in dl:
+                        dl.append(d)
+            except:
+                pass
+        return dl
 
     def dump_statistics(self):
         s = self.statistics
@@ -258,7 +271,7 @@ class nyanMigen:
         module = nyanMigen._get_module(ctx)
         if nyanMigen._can_convert_sync_assign(i, ctx):
             nyanMigen._parse_deps(value, ctx)
-            nyanMigen._add_target(target, ctx)
+            nyanMigen._add_target(target, ctx, domain = domain)
             return nyanMigen._dump_assign(module, domain, target, value)
         else:
             raise Exception()
@@ -277,10 +290,14 @@ class nyanMigen:
                     (code.orelse, ctx) = nyanMigen._nyanify(code.orelse, ctx)
                 return code
 
-    def _add_target(target, ctx):
+    def _add_target(target, ctx, domain = None):
         if target in ctx:
             if nyanMigen._is_type(ctx, target, "Signal()"):
                 ctx[target]["is_driven"] = True
+                if "domain" in ctx[target]:
+                    if domain != ctx[target]["domain"]:
+                        print("warning: redefining signal", target, "domain")
+                ctx[target]["domain"] = domain
 
     def _parse_deps(value, ctx):
         ret = []
