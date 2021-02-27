@@ -7,10 +7,11 @@ from astunparse import unparse
 
 def nyanify(generics_file = None):
     def foo(cls):
+        statistics = {}
         cls_str = inspect.getsource(cls)
         cls_src = ast.parse(cls_str)
+        classname = cls_src.body[0].name
         print("```python\n" + cls_str + "\n```")
-        l = len(unparse(cls_src))
         code = nyanMigen.parse(cls_src, "elaborate")
         (elaborate, ctx) = nyanMigen.fix(code)
         ports = nyanMigen.gen_ports(ctx)
@@ -21,9 +22,31 @@ def nyanify(generics_file = None):
         cls_src.body[0].body = [init, ports, inputs, outputs, elaborate]
         cls_src.body.append(e)
         print(" ->\n```python\n" + unparse(cls_src) + "\n```")
-        print(l, "chars ->", len(unparse(cls_src)), "chars")
+        s = nyanStatistics(cls, cls_src, ctx)
+        s.dump_statistics()
         return nyanMigen.compile(cls_src)
     return foo
+
+class nyanStatistics:
+    def __init__(self, cls, cls_fixed, ctx):
+        def foo (a):
+            return a + ": " + ctx[a]["type"]
+        self.classname = cls_fixed.body[0].name
+        self.statistics = {}
+        self.statistics["source chars"] = len(inspect.getsource(cls))
+        self.statistics["result chars"] = len(unparse(cls_fixed))
+        self.statistics["decompression ratio"] = len(unparse(cls_fixed))/len(inspect.getsource(cls))
+        self.statistics["inputs(" + str(len(nyanMigen._get_inputs(ctx))) +")"] = list(map(foo, nyanMigen._get_inputs(ctx)))
+        self.statistics["outputs(" + str(len(nyanMigen._get_outputs(ctx))) + ")"] = list(map(foo, nyanMigen._get_outputs(ctx)))
+        self.statistics["generics(" + str(len(nyanMigen._get_generics(ctx))) + ")"] = nyanMigen._get_generics(ctx)
+
+    def dump_statistics(self):
+        s = self.statistics
+        stat = ""
+        for i in s:
+            stat += i + ": " + str(s[i]) + "\n"
+        with open(self.classname + ".stat", 'w') as f:
+            f.write(stat)
 
 converters = []
 def converter(foo):

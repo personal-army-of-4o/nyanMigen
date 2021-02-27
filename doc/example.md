@@ -78,4 +78,3 @@ if (__name__ == '__main__'):
     main(top, top.ports())
 
 ```
-457 chars -> 1258 chars
