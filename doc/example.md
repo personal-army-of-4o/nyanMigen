@@ -50,6 +50,7 @@ class c():
     def elaborate(self, platform):
         w = self.w
         cc_flag1 = self.cc_flag1
+        from nmigen import Module, Signal, If, Else
         m = Module()
         a = self.a
         b = self.b
@@ -75,7 +76,8 @@ if (__name__ == '__main__'):
     with open('generics.json', 'r') as read_file:
         generics = json.load(read_file)
     top = c(generics.w, generics.cc_flag1)
+    from nMigen.cli import main
     main(top, top.ports())
 
 ```
-457 chars -> 1258 chars
+457 chars -> 1342 chars

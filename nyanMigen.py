@@ -49,6 +49,7 @@ class nyanMigen:
     def fix(code):
         nyanMigen._add_module(code)
         (code.body, ctx) = nyanMigen._nyanify(code.body)
+        nyanMigen._add_elab_imports(code)
         nyanMigen._replace_ports_assigns(code.body, ctx)
         nyanMigen._add_return_module(code.body)
         nyanMigen._add_generics_to_elaborate(code, ctx)
@@ -64,7 +65,7 @@ class nyanMigen:
         return nyanMigen._gen_ports(ctx, "outputs", nyanMigen._get_outputs)
 
     def gen_init(ctx):
-        gnames = nyanMigen._get_generics(ctx) 
+        gnames = nyanMigen._get_generics(ctx)
         args_string = ""
         generics = []
         for i in gnames:
@@ -80,6 +81,11 @@ class nyanMigen:
             body.append(add)
         code.body = body
         return code
+
+    def _add_elab_imports(code):
+        add = ast.parse("from nmigen import Module, Signal, If, Else").body
+        add.extend(code.body)
+        code.body = add
 
     def gen_exec(cls, ctx, generics_file):
         generics_str = ""
@@ -102,6 +108,7 @@ class nyanMigen:
             "if __name__ == \"__main__\":\n" +
             generics_str +
             "    top = " + cls.body[0].name + "(" + args_str + ")\n" +
+            "    from nMigen.cli import main\n" +
             "    main(top, top.ports())"
         )
         code = ast.parse(str)
@@ -109,7 +116,7 @@ class nyanMigen:
 
     def _add_generics_to_elaborate(body, ctx):
         generics = []
-        gnames = nyanMigen._get_generics(ctx) 
+        gnames = nyanMigen._get_generics(ctx)
         for i in gnames:
             add = ast.parse(i + " = self." + i).body[0]
             generics.append(add)
