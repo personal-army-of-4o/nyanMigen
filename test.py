@@ -3,7 +3,7 @@ from nmigen.cli import main
 from nyanMigen import nyanify
 
 
-@nyanify
+@nyanify(generics_file="config.json")
 class ram:
     def elaborate(self, platform):
         wr_en = Signal()

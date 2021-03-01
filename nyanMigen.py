@@ -22,6 +22,8 @@ def nyanify(generics_file = None):
         cls_src.body.append(e)
         print(" ->\n```python\n" + unparse(cls_src) + "\n```")
         print(l, "chars ->", len(unparse(cls_src)), "chars")
+        for i in ctx:
+            print(i, ctx[i])
         return nyanMigen.compile(cls_src)
     return foo
 
@@ -83,7 +85,7 @@ class nyanMigen:
         return code
 
     def _add_elab_imports(code):
-        add = ast.parse("from nmigen import Module, Signal, If, Else").body
+        add = ast.parse("from nmigen import Module, Signal, If, Else, Array").body
         add.extend(code.body)
         code.body = add
 
@@ -169,6 +171,7 @@ class nyanMigen:
             ctx = {}
         ret = []
         for i in code:
+            converted = False
             for f in converters:
                 try:
                     if isinstance(i, Assign):
@@ -177,12 +180,19 @@ class nyanMigen:
                                 nyanMigen._set_to_initialized(j.id, ctx)
                             except:
                                 pass
+                except:
+                    pass
+                try:
                     ii = f(i, ctx)
                     if ii:
                         i = ii
+                        converted = True
                         break
                 except Exception as e:
                     pass
+            if not converted:
+                print("failed to convert line")
+                ppa(i)
             if isinstance(i, list):
                 ret.extend(i)
             else:
@@ -202,6 +212,17 @@ class nyanMigen:
                         if isinstance(i.ctx, Store):
                             nyanMigen._set_type(ctx, i.id, "Signal()", code.value.args)
                             nyanMigen._parse_deps(code.value.args, ctx)
+                            return code
+            elif (
+                code.value.func.id == "Array" and
+                isinstance(code.value.func.ctx, Load) and
+                len(code.value.keywords) == 0
+            ):
+                for i in code.targets:
+                    if isinstance(i, Name):
+                        if isinstance(i.ctx, Store):
+                            nyanMigen._set_type(ctx, i.id, "Array()", code.value.args)
+                            return code
 
     @converter
     def _parse_module(code, ctx):
@@ -216,6 +237,7 @@ class nyanMigen:
                     if isinstance(i, Name):
                         if isinstance(i.ctx, Store):
                             nyanMigen._set_type(ctx, i.id, "Module()")
+                            return code
 
     @converter
     def _convert_comb_assign(code, ctx):
@@ -252,7 +274,7 @@ class nyanMigen:
         if isinstance(code, If):
             deps = nyanMigen._parse_deps(code.test, ctx)
             nyanMigen._add_drivers_to_ctx(deps, ctx)
-            doit = nyanMigen._is_signal(deps, ctx)
+            doit = nyanMigen._is_signal(ctx, deps)
             if doit:
                 return nyanMigen._gen_if_code(code, ctx)
             else:
@@ -263,7 +285,7 @@ class nyanMigen:
 
     def _add_target(target, ctx):
         if target in ctx:
-            if nyanMigen._is_type(ctx, target, "Signal()"):
+            if nyanMigen._is_signal(ctx, target):
                 ctx[target]["is_driven"] = True
 
     def _parse_deps(value, ctx):
@@ -296,7 +318,7 @@ class nyanMigen:
     def _get_inputs(ctx):
         ret = []
         for i in ctx:
-            if nyanMigen._is_type(ctx, i, "Signal()"):
+            if nyanMigen._is_signal(ctx, i):
                 if ctx[i]["is_driven"] == False:
                     if ctx[i]["driver"]:
                         ret.append(i)
@@ -305,7 +327,7 @@ class nyanMigen:
     def _get_outputs(ctx):
         ret = []
         for i in ctx:
-            if nyanMigen._is_type(ctx, i, "Signal()"):
+            if nyanMigen._is_signal(ctx, i):
                 if ctx[i]["driver"] == False:
                     if ctx[i]["is_driven"]:
                         ret.append(i)
@@ -347,13 +369,13 @@ class nyanMigen:
             if "type" in ctx[n]:
                 return ctx[n]["type"]
 
-    def _is_signal(v, ctx):
+    def _is_signal(ctx, v):
         if isinstance(v, list):
             for i in v:
-                if nyanMigen._is_signal(i, ctx):
+                if nyanMigen._is_signal(ctx, i):
                     return True
         else:
-            return nyanMigen._get_type(ctx, v) == "Signal()"
+            return ((nyanMigen._get_type(ctx, v) == "Array()") or (nyanMigen._get_type(ctx, v) == "Signal()"))
         return False
 
     def _gen_if_code(code, ctx):
@@ -368,13 +390,13 @@ class nyanMigen:
 
     def _can_convert_comb_assign(arg, ctx):
         if (not isinstance(arg[1], Call) and
-            nyanMigen._is_type(ctx, arg[0], "Signal()")
+            nyanMigen._is_signal(ctx, arg[0])
         ):
             return True
         return False
 
     def _can_convert_sync_assign(arg, ctx):
-        if (nyanMigen._is_type(ctx, arg[1], "Signal()")):
+        if (nyanMigen._is_signal(ctx, arg[1])):
             return True
         return False
 
