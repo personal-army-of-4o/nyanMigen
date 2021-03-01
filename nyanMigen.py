@@ -88,6 +88,10 @@ class nyanMigen:
         code.body = add
 
     def gen_exec(cls, ctx, generics_file):
+
+        def add_generics2str(string):
+            return "generics." + string
+
         generics_str = ""
         args_str = ""
         generics = nyanMigen._get_generics(ctx)
@@ -97,13 +101,7 @@ class nyanMigen:
                 "    with open('" + generics_file + "', 'r') as read_file:\n" +
                 "        generics = json.load(read_file)\n"
             )
-            first = True
-            for i in generics:
-                if first:
-                    args_str += "generics." + i
-                    first = False
-                else:
-                    args_str += ", generics." + i
+            args_str = ', '.join(map(add_generics2str, generics))
         str = (
             "if __name__ == \"__main__\":\n" +
             generics_str +
