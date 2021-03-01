@@ -90,14 +90,14 @@ if (__name__ == '__main__'):
 660 chars -> 1713 chars
 m {'initialized': True, 'type': 'Module()'}
 wr_en {'initialized': True, 'type': 'Signal()', 'driver': True, 'is_driven': False, 'args': []}
-wr_addr {'initialized': True, 'type': 'Signal()', 'driver': True, 'is_driven': False, 'args': [<_ast.Name object at 0xb5f2edd0>]}
+wr_addr {'initialized': True, 'type': 'Signal()', 'driver': True, 'is_driven': False, 'args': [<_ast.Name object at 0xb5f71ef0>]}
 aw {'driver': True, 'type': 'other', 'is_driven': False, 'args': None}
-wr_data {'initialized': True, 'type': 'Signal()', 'driver': True, 'is_driven': False, 'args': [<_ast.Name object at 0xb5f2ee90>]}
+wr_data {'initialized': True, 'type': 'Signal()', 'driver': True, 'is_driven': False, 'args': [<_ast.Name object at 0xb5f71550>]}
 dw {'driver': True, 'type': 'other', 'is_driven': False, 'args': None}
-rd_addr {'initialized': True, 'type': 'Signal()', 'driver': True, 'is_driven': False, 'args': [<_ast.Name object at 0xb5f2e4d0>]}
-rd_data {'initialized': True, 'type': 'Signal()', 'driver': False, 'is_driven': True, 'args': [<_ast.Name object at 0xb5f2ec90>]}
-mem {'initialized': True, 'type': 'Array()', 'driver': True, 'is_driven': True, 'args': [<_ast.GeneratorExp object at 0xb5f2e630>]}
+rd_addr {'initialized': True, 'type': 'Signal()', 'driver': True, 'is_driven': False, 'args': [<_ast.Name object at 0xb5f71630>]}
+rd_data {'initialized': True, 'type': 'Signal()', 'driver': False, 'is_driven': True, 'args': [<_ast.Name object at 0xb5f716b0>]}
+mem {'initialized': True, 'type': 'Array()', 'driver': True, 'is_driven': True, 'args': [<_ast.GeneratorExp object at 0xb5f71770>]}
 reg_wr {'driver': True, 'type': 'other', 'is_driven': False, 'args': None}
 wr_en_reg {'initialized': True, 'type': 'Signal()', 'driver': True, 'is_driven': True, 'args': []}
-wr_addr_reg {'initialized': True, 'type': 'Signal()', 'driver': True, 'is_driven': True, 'args': [<_ast.Name object at 0xb5f2e8f0>]}
-wr_data_reg {'initialized': True, 'type': 'Signal()', 'driver': True, 'is_driven': True, 'args': [<_ast.Name object at 0xb5f2e990>]}
+wr_addr_reg {'initialized': True, 'type': 'Signal()', 'driver': True, 'is_driven': True, 'args': [<_ast.Name object at 0xb5f71a10>]}
+wr_data_reg {'initialized': True, 'type': 'Signal()', 'driver': True, 'is_driven': True, 'args': [<_ast.Name object at 0xb5f71ad0>]}
