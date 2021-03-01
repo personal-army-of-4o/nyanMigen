@@ -27,14 +27,6 @@ class ram:
         rd_data = mem[rd_addr]
 
 ```
-failed to convert line
-Assign(targets=[
-    Subscript(value=Attribute(value=Name(id='sync', ctx=Load()), attr='mem', ctx=Load()), slice=Index(value=Name(id='wr_addr_reg', ctx=Load())), ctx=Store()),
-  ], value=Name(id='wr_data_reg', ctx=Load()))
-failed to convert line
-Assign(targets=[
-    Subscript(value=Attribute(value=Name(id='sync', ctx=Load()), attr='mem', ctx=Load()), slice=Index(value=Name(id='wr_addr', ctx=Load())), ctx=Store()),
-  ], value=Name(id='wr_data', ctx=Load()))
  ->
 ```python
 
@@ -49,19 +41,16 @@ class ram():
         self.wr_addr = Signal(aw)
         self.wr_data = Signal(dw)
         self.rd_addr = Signal(aw)
-        self.mem = Signal((Signal(dw) for i in range((2 ** aw))))
         self.rd_data = Signal(dw)
-        self.wr_addr_reg = Signal(aw)
-        self.wr_data_reg = Signal(dw)
 
     def ports(self):
-        return [self.wr_en, self.wr_addr, self.wr_data, self.rd_addr, self.mem, self.rd_data, self.wr_addr_reg, self.wr_data_reg]
+        return [self.wr_en, self.wr_addr, self.wr_data, self.rd_addr, self.rd_data]
 
     def inputs(self):
-        return [self.wr_en, self.wr_addr, self.wr_data, self.rd_addr, self.mem]
+        return [self.wr_en, self.wr_addr, self.wr_data, self.rd_addr]
 
     def outputs(self):
-        return [self.rd_data, self.wr_addr_reg, self.wr_data_reg]
+        return [self.rd_data]
 
     def elaborate(self, platform):
         aw = self.aw
@@ -74,7 +63,7 @@ class ram():
         wr_data = self.wr_data
         rd_addr = self.rd_addr
         rd_data = self.rd_data
-        mem = self.mem
+        mem = Array((Signal(dw) for i in range((2 ** aw))))
         if reg_wr:
             wr_en_reg = Signal()
             wr_addr_reg = Signal(aw)
@@ -83,10 +72,10 @@ class ram():
             m.d.sync += wr_addr_reg.eq(wr_addr)
             m.d.sync += wr_data_reg.eq(wr_data)
             with m.If(wr_en_reg):
-                sync.mem[wr_addr_reg] = wr_data_reg
+                m.d.sync += mem[wr_addr_reg].eq(wr_data_reg)
         else:
             with m.If(wr_en):
-                sync.mem[wr_addr] = wr_data
+                m.d.sync += mem[wr_addr].eq(wr_data)
         m.d.comb += rd_data.eq(mem[rd_addr])
         return m
 if (__name__ == '__main__'):
@@ -98,17 +87,17 @@ if (__name__ == '__main__'):
     main(top, top.ports())
 
 ```
-660 chars -> 1892 chars
+660 chars -> 1713 chars
 m {'initialized': True, 'type': 'Module()'}
 wr_en {'initialized': True, 'type': 'Signal()', 'driver': True, 'is_driven': False, 'args': []}
-wr_addr {'initialized': True, 'type': 'Signal()', 'driver': True, 'is_driven': False, 'args': [<_ast.Name object at 0xb5f47e90>]}
+wr_addr {'initialized': True, 'type': 'Signal()', 'driver': True, 'is_driven': False, 'args': [<_ast.Name object at 0xb5f2edd0>]}
 aw {'driver': True, 'type': 'other', 'is_driven': False, 'args': None}
-wr_data {'initialized': True, 'type': 'Signal()', 'driver': True, 'is_driven': False, 'args': [<_ast.Name object at 0xb5f47d10>]}
+wr_data {'initialized': True, 'type': 'Signal()', 'driver': True, 'is_driven': False, 'args': [<_ast.Name object at 0xb5f2ee90>]}
 dw {'driver': True, 'type': 'other', 'is_driven': False, 'args': None}
-rd_addr {'initialized': True, 'type': 'Signal()', 'driver': True, 'is_driven': False, 'args': [<_ast.Name object at 0xb5f47610>]}
-rd_data {'initialized': True, 'type': 'Signal()', 'driver': False, 'is_driven': True, 'args': [<_ast.Name object at 0xb5f47650>]}
-mem {'initialized': True, 'type': 'Array()', 'driver': True, 'is_driven': False, 'args': [<_ast.GeneratorExp object at 0xb5f47710>]}
+rd_addr {'initialized': True, 'type': 'Signal()', 'driver': True, 'is_driven': False, 'args': [<_ast.Name object at 0xb5f2e4d0>]}
+rd_data {'initialized': True, 'type': 'Signal()', 'driver': False, 'is_driven': True, 'args': [<_ast.Name object at 0xb5f2ec90>]}
+mem {'initialized': True, 'type': 'Array()', 'driver': True, 'is_driven': True, 'args': [<_ast.GeneratorExp object at 0xb5f2e630>]}
 reg_wr {'driver': True, 'type': 'other', 'is_driven': False, 'args': None}
 wr_en_reg {'initialized': True, 'type': 'Signal()', 'driver': True, 'is_driven': True, 'args': []}
-wr_addr_reg {'initialized': True, 'type': 'Signal()', 'driver': False, 'is_driven': True, 'args': [<_ast.Name object at 0xb5f479b0>]}
-wr_data_reg {'initialized': True, 'type': 'Signal()', 'driver': False, 'is_driven': True, 'args': [<_ast.Name object at 0xb5f47a70>]}
+wr_addr_reg {'initialized': True, 'type': 'Signal()', 'driver': True, 'is_driven': True, 'args': [<_ast.Name object at 0xb5f2e8f0>]}
+wr_data_reg {'initialized': True, 'type': 'Signal()', 'driver': True, 'is_driven': True, 'args': [<_ast.Name object at 0xb5f2e990>]}

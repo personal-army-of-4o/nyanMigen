@@ -1,6 +1,6 @@
 import ast
 import inspect
-from ast import Assign, AugAssign, Name, Load, Store, Call, If
+from ast import Assign, AugAssign, Name, Load, Store, Call, If, Subscript
 from pprintast import pprintast as ppa
 from astunparse import unparse
 
@@ -260,12 +260,18 @@ class nyanMigen:
 
     @converter
     def _convert_sync_assign(code, ctx):
-        (domain, target, value) = i = nyanMigen._parse_sync_assign(code)
+        slice = None
+        try:
+            (domain, target, value) = i = nyanMigen._parse_sync_assign(code)
+        except:
+            (domain, target, value, slice) = i = nyanMigen._parse_sync_assign_slice(code)
         module = nyanMigen._get_module(ctx)
         if nyanMigen._can_convert_sync_assign(i, ctx):
             nyanMigen._parse_deps(value, ctx)
+            if slice:
+                nyanMigen._parse_deps(slice, ctx)
             nyanMigen._add_target(target, ctx)
-            return nyanMigen._dump_assign(module, domain, target, value)
+            return nyanMigen._dump_assign(module, domain, target, value, slice)
         else:
             raise Exception()
 
@@ -420,14 +426,29 @@ class nyanMigen:
                 value = code.value
         return (domain, target, value)
 
-    def _dump_assign(m, d, t, v):
+    def _parse_sync_assign_slice(code):
+        if isinstance(code, Assign):
+            if len(code.targets) == 1:
+                domain = code.targets[0].value.value.id
+                target = code.targets[0].value.attr
+                slice = code.targets[0].slice
+                value = code.value
+        return (domain, target, value, slice)
+
+    def _dump_assign(m, d, t, v, s = None):
         if not d:
             d = "comb"
-        ret = ast.parse("m.d.sync += t.eq(v)").body[0]
+        if s:
+            ret = ast.parse("m.d.sync += t[s].eq(v)").body[0]
+            ret.value.func.value.value.id = t
+            ret.value.func.value.slice = s
+            ret.value.args = [v]
+        else:
+            ret = ast.parse("m.d.sync += t.eq(v)").body[0]
+            ret.value.func.value.id = t
+            ret.value.args = [v]
         ret.target.value.value.id = m
         ret.target.attr = d
-        ret.value.func.value.id = t
-        ret.value.args = [v]
         return ret
 
     @converter

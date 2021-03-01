@@ -1,4 +1,2 @@
 handle arrays of signals
-2. parse array dependencies
-3. change `_is_type` to say arrays are signals
 4. add array support to `__init__` generator
