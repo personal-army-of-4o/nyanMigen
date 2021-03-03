@@ -89,7 +89,12 @@ class nyanMigen:
         ).body[0]
         body = generics
         for i in nyanMigen._get_ports(ctx):
-            add = ast.parse("self.a = Signal()").body[0]
+            if nyanMigen._is_type(ctx, i, "Signal()"):
+                add = ast.parse("self.a = Signal()").body[0]
+            elif nyanMigen._is_type(ctx, i, "Array()"):
+                add = ast.parse("self.a = Array()").body[0]
+            else:
+                raise Failure("unknown signal type for signal " + i)
             add.targets[0].attr = i
             if ctx[i]["args"]:
                 add.value.args = ctx[i]["args"]
@@ -255,14 +260,20 @@ class nyanMigen:
 
     @converter
     def _convert_comb_assign(code, ctx):
-        (target, value) = i = nyanMigen._parse_comb_assign(code)
+        slice = None
+        try:
+            (target, value) = i = nyanMigen._parse_comb_assign(code)
+        except:
+            (target, value, slice) = i = nyanMigen._parse_comb_assign_slice(code)
         module = nyanMigen._get_module(ctx)
         if not module:
             return
         if nyanMigen._can_convert_comb_assign(i, ctx):
             nyanMigen._parse_deps(value, ctx)
+            if slice:
+                nyanMigen._parse_deps(slice, ctx)
             nyanMigen._add_target(target, ctx)
-            return nyanMigen._dump_assign(module, None, target, value)
+            return nyanMigen._dump_assign(module, None, target, value, slice)
         else:
             raise Exception()
 
@@ -454,6 +465,14 @@ class nyanMigen:
                 target = code.targets[0].id
                 value = code.value
         return (target, value)
+
+    def _parse_comb_assign_slice(code):
+        if isinstance(code, Assign):
+            if len(code.targets) == 1:
+                target = code.targets[0].value.id
+                slice = code.targets[0].slice
+                value = code.value
+        return (target, value, slice)
 
     def _parse_sync_assign(code):
         if isinstance(code, Assign):
