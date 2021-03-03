@@ -1,16 +1,17 @@
 import ast
 import inspect
-from ast import Assign, AugAssign, Name, Load, Store, Call, If
+from ast import Assign, AugAssign, Name, Load, Store, Call, If, Subscript, Num
 from pprintast import pprintast as ppa
 from astunparse import unparse
 
 
-def nyanify(generics_file = None):
+def nyanify(generics_file = None, print_ctx = False):
     def foo(cls):
         statistics = {}
         cls_str = inspect.getsource(cls)
         cls_src = ast.parse(cls_str)
         classname = cls_src.body[0].name
+        nyanMigen.add_heritage(cls_src)
         print("```python\n" + cls_str + "\n```")
         code = nyanMigen.parse(cls_src, "elaborate")
         (elaborate, ctx) = nyanMigen.fix(code)
@@ -19,19 +20,24 @@ def nyanify(generics_file = None):
         outputs = nyanMigen.gen_out_ports(ctx)
         init = nyanMigen.gen_init(ctx)
         e = nyanMigen.gen_exec(cls_src, ctx, generics_file)
-        cls_src.body[0].body = [init, ports, inputs, outputs, elaborate]
-        cls_src.body.append(e)
+        cls_src.body[0].body = [e, init, ports, inputs, outputs, elaborate]
+        imports = ast.parse("from nmigen import Elaboratable").body
+        imports.extend(cls_src.body)
+        cls_src.body = imports
         print(" ->\n```python\n" + unparse(cls_src) + "\n```")
-        s = nyanStatistics(cls, cls_src, ctx)
+        s = nyanStatistics(cls, cls_src, ctx, classname)
         s.dump_statistics()
-        return nyanMigen.compile(cls_src)
+        if print_ctx:
+            for i in ctx:
+                print(i, ctx[i])
+        return nyanMigen.compile(cls_src, classname)
     return foo
 
 class nyanStatistics:
-    def __init__(self, cls, cls_fixed, ctx):
+    def __init__(self, cls, cls_fixed, ctx, classname):
         def foo (a):
             return a + ": " + ctx[a]["type"]
-        self.classname = cls_fixed.body[0].name
+        self.classname = classname
         self.statistics = {}
         self.statistics["source chars"] = len(inspect.getsource(cls))
         self.statistics["result chars"] = len(unparse(cls_fixed))
@@ -66,6 +72,9 @@ def converter(foo):
     converters.append(foo)
     return foo
 
+class Failure(Exception):
+    pass
+
 class nyanMigen:
     def parse(cls, fn):
         code = None
@@ -73,18 +82,25 @@ class nyanMigen:
             if i.name == fn:
                 code = i
         if not code:
-            raise Exception("can't find `elaborate` method on class", cls.body[0].name)
+            raise Exception("can't find `" + fn + "` method on class", cls.body[0].name)
         return ast.parse(code)
 
-    def compile(thing):
+    def add_heritage(cls):
+        code = ast.parse("class foo(Elaboratable):\n    pass")
+        cls.body[0].bases = code.body[0].bases
+
+    def compile(thing, name = None):
         code = compile(filename="fakename", source=thing, mode="exec")
         mod = {}
         exec(code, mod)
-        return mod[thing.body[0].name]
+        if not name:
+            name = thing.body[0].name
+        return mod[name]
 
     def fix(code):
         nyanMigen._add_module(code)
         (code.body, ctx) = nyanMigen._nyanify(code.body)
+        nyanMigen._add_elab_imports(code)
         nyanMigen._replace_ports_assigns(code.body, ctx)
         nyanMigen._add_return_module(code.body)
         nyanMigen._add_generics_to_elaborate(code, ctx)
@@ -100,24 +116,40 @@ class nyanMigen:
         return nyanMigen._gen_ports(ctx, "outputs", nyanMigen._get_outputs)
 
     def gen_init(ctx):
-        gnames = nyanMigen._get_generics(ctx) 
+        gnames = nyanMigen._get_generics(ctx)
         args_string = ""
         generics = []
         for i in gnames:
             args_string += ", " + i
             generics.append(ast.parse("self." + i + " = " + i).body[0])
-        code = ast.parse("def __init__(self" + args_string + "):\n    pass").body[0]
+        code = ast.parse("def __init__(self" + args_string + "):\n" +
+            "    from nmigen import Module, Signal, Array\n"
+        ).body[0]
         body = generics
         for i in nyanMigen._get_ports(ctx):
-            add = ast.parse("self.a = Signal()").body[0]
+            if nyanMigen._is_type(ctx, i, "Signal()"):
+                add = ast.parse("self.a = Signal()").body[0]
+            elif nyanMigen._is_type(ctx, i, "Array()"):
+                add = ast.parse("self.a = Array()").body[0]
+            else:
+                raise Failure("unknown signal type for signal " + i)
             add.targets[0].attr = i
             if ctx[i]["args"]:
                 add.value.args = ctx[i]["args"]
             body.append(add)
-        code.body = body
+        code.body.extend(body)
         return code
 
+    def _add_elab_imports(code):
+        add = ast.parse("from nmigen import Module, Signal, Array").body
+        add.extend(code.body)
+        code.body = add
+
     def gen_exec(cls, ctx, generics_file):
+
+        def add_generics2str(string):
+            return "generics[\"" + string + "\"]"
+
         generics_str = ""
         args_str = ""
         generics = nyanMigen._get_generics(ctx)
@@ -125,27 +157,23 @@ class nyanMigen:
             generics_str = (
                 "    import json\n" +
                 "    with open('" + generics_file + "', 'r') as read_file:\n" +
-                "        generics = json.load(read_file)\n"
+                "        generics = json.load(read_file)\n" +
+                "    print(generics)\n"
             )
-            first = True
-            for i in generics:
-                if first:
-                    args_str += "generics." + i
-                    first = False
-                else:
-                    args_str += ", generics." + i
+            args_str = ', '.join(map(add_generics2str, generics))
         str = (
-            "if __name__ == \"__main__\":\n" +
+            "def main():\n" +
             generics_str +
             "    top = " + cls.body[0].name + "(" + args_str + ")\n" +
-            "    main(top, top.ports())"
+            "    from nmigen.cli import main\n" +
+            "    main(top, name = \"" + cls.body[0].name + "\", ports = top.ports())"
         )
         code = ast.parse(str)
         return code.body[0]
 
     def _add_generics_to_elaborate(body, ctx):
         generics = []
-        gnames = nyanMigen._get_generics(ctx) 
+        gnames = nyanMigen._get_generics(ctx)
         for i in gnames:
             add = ast.parse(i + " = self." + i).body[0]
             generics.append(add)
@@ -198,6 +226,7 @@ class nyanMigen:
             ctx = {}
         ret = []
         for i in code:
+            converted = False
             for f in converters:
                 try:
                     if isinstance(i, Assign):
@@ -206,12 +235,21 @@ class nyanMigen:
                                 nyanMigen._set_to_initialized(j.id, ctx)
                             except:
                                 pass
+                except:
+                    pass
+                try:
                     ii = f(i, ctx)
                     if ii:
                         i = ii
+                        converted = True
                         break
+                except Failure:
+                    raise
                 except Exception as e:
                     pass
+            if not converted:
+                print("failed to convert line")
+                ppa(i)
             if isinstance(i, list):
                 ret.extend(i)
             else:
@@ -231,6 +269,17 @@ class nyanMigen:
                         if isinstance(i.ctx, Store):
                             nyanMigen._set_type(ctx, i.id, "Signal()", code.value.args)
                             nyanMigen._parse_deps(code.value.args, ctx)
+                            return code
+            elif (
+                code.value.func.id == "Array" and
+                isinstance(code.value.func.ctx, Load) and
+                len(code.value.keywords) == 0
+            ):
+                for i in code.targets:
+                    if isinstance(i, Name):
+                        if isinstance(i.ctx, Store):
+                            nyanMigen._set_type(ctx, i.id, "Array()", code.value.args)
+                            return code
 
     @converter
     def _parse_module(code, ctx):
@@ -245,17 +294,24 @@ class nyanMigen:
                     if isinstance(i, Name):
                         if isinstance(i.ctx, Store):
                             nyanMigen._set_type(ctx, i.id, "Module()")
+                            return code
 
     @converter
     def _convert_comb_assign(code, ctx):
-        (target, value) = i = nyanMigen._parse_comb_assign(code)
+        slice = None
+        try:
+            (target, value) = i = nyanMigen._parse_comb_assign(code)
+        except:
+            (target, value, slice) = i = nyanMigen._parse_comb_assign_slice(code)
         module = nyanMigen._get_module(ctx)
         if not module:
             return
         if nyanMigen._can_convert_comb_assign(i, ctx):
             nyanMigen._parse_deps(value, ctx)
+            if slice:
+                nyanMigen._parse_deps(slice, ctx)
             nyanMigen._add_target(target, ctx)
-            return nyanMigen._dump_assign(module, None, target, value)
+            return nyanMigen._dump_assign(module, None, target, value, slice)
         else:
             raise Exception()
 
@@ -267,12 +323,18 @@ class nyanMigen:
 
     @converter
     def _convert_sync_assign(code, ctx):
-        (domain, target, value) = i = nyanMigen._parse_sync_assign(code)
+        slice = None
+        try:
+            (domain, target, value) = i = nyanMigen._parse_sync_assign(code)
+        except:
+            (domain, target, value, slice) = i = nyanMigen._parse_sync_assign_slice(code)
         module = nyanMigen._get_module(ctx)
         if nyanMigen._can_convert_sync_assign(i, ctx):
             nyanMigen._parse_deps(value, ctx)
+            if slice:
+                nyanMigen._parse_deps(slice, ctx)
             nyanMigen._add_target(target, ctx, domain = domain)
-            return nyanMigen._dump_assign(module, domain, target, value)
+            return nyanMigen._dump_assign(module, domain, target, value, slice)
         else:
             raise Exception()
 
@@ -281,7 +343,7 @@ class nyanMigen:
         if isinstance(code, If):
             deps = nyanMigen._parse_deps(code.test, ctx)
             nyanMigen._add_drivers_to_ctx(deps, ctx)
-            doit = nyanMigen._is_signal(deps, ctx)
+            doit = nyanMigen._is_signal(ctx, deps)
             if doit:
                 return nyanMigen._gen_if_code(code, ctx)
             else:
@@ -290,16 +352,38 @@ class nyanMigen:
                     (code.orelse, ctx) = nyanMigen._nyanify(code.orelse, ctx)
                 return code
 
+    @converter
+    def _convert_for(code, ctx):
+        target = code.target
+        if not isinstance(target, Name):
+            ppa(code)
+            raise Failure("only one loop var is supported in for loops")
+        nyanMigen._parse_deps(code.iter, ctx)
+        nyanMigen._set_to_initialized(code.target.id, ctx)
+        (code.body, _) = nyanMigen._nyanify(code.body, ctx)
+        return code
+
+    @converter
+    def _convert_simple_assignment(code, ctx):
+        if(
+            isinstance(code, Assign) and
+            len(code.targets) == 1 and
+            isinstance(code.targets[0], Name) and
+            isinstance(code.targets[0].ctx, Store) and
+            isinstance(code.value, Num)
+        ):
+            return code
+
     def _add_target(target, ctx, domain = None):
         if target in ctx:
-            if nyanMigen._is_type(ctx, target, "Signal()"):
+            if nyanMigen._is_signal(ctx, target):
                 ctx[target]["is_driven"] = True
                 if "domain" in ctx[target]:
                     if domain != ctx[target]["domain"]:
                         print("warning: redefining signal", target, "domain")
                 ctx[target]["domain"] = domain
 
-    def _parse_deps(value, ctx):
+    def _parse_deps(value, ctx, is_func = False):
         ret = []
         if isinstance(value, list):
             for i in value:
@@ -307,16 +391,17 @@ class nyanMigen:
         else:
             try:
                 if isinstance(value.ctx, Load):
-                    if value.id not in ctx:
-                        ctx[value.id] = {}
-                    ctx[value.id]["driver"] = True
-                    ret.append(value.id)
-                    if nyanMigen._get_type(ctx, value.id) == None:
-                        nyanMigen._set_type(ctx, value.id, "other")
+                    if not is_func:
+                        if value.id not in ctx:
+                            ctx[value.id] = {}
+                        ctx[value.id]["driver"] = True
+                        ret.append(value.id)
+                        if nyanMigen._get_type(ctx, value.id) == None:
+                            nyanMigen._set_type(ctx, value.id, "other")
             except:
                 try:
                     for i in value.__dict__.keys():
-                        ret.extend(nyanMigen._parse_deps(getattr(value, i), ctx))
+                        ret.extend(nyanMigen._parse_deps(getattr(value, i), ctx, i == "func"))
                 except Exception as e:
                     pass
         return ret
@@ -329,7 +414,7 @@ class nyanMigen:
     def _get_inputs(ctx):
         ret = []
         for i in ctx:
-            if nyanMigen._is_type(ctx, i, "Signal()"):
+            if nyanMigen._is_signal(ctx, i):
                 if ctx[i]["is_driven"] == False:
                     if ctx[i]["driver"]:
                         ret.append(i)
@@ -338,7 +423,7 @@ class nyanMigen:
     def _get_outputs(ctx):
         ret = []
         for i in ctx:
-            if nyanMigen._is_type(ctx, i, "Signal()"):
+            if nyanMigen._is_signal(ctx, i):
                 if ctx[i]["driver"] == False:
                     if ctx[i]["is_driven"]:
                         ret.append(i)
@@ -380,13 +465,13 @@ class nyanMigen:
             if "type" in ctx[n]:
                 return ctx[n]["type"]
 
-    def _is_signal(v, ctx):
+    def _is_signal(ctx, v):
         if isinstance(v, list):
             for i in v:
-                if nyanMigen._is_signal(i, ctx):
+                if nyanMigen._is_signal(ctx, i):
                     return True
         else:
-            return nyanMigen._get_type(ctx, v) == "Signal()"
+            return ((nyanMigen._get_type(ctx, v) == "Array()") or (nyanMigen._get_type(ctx, v) == "Signal()"))
         return False
 
     def _gen_if_code(code, ctx):
@@ -400,14 +485,12 @@ class nyanMigen:
         return ret
 
     def _can_convert_comb_assign(arg, ctx):
-        if (not isinstance(arg[1], Call) and
-            nyanMigen._is_type(ctx, arg[0], "Signal()")
-        ):
+        if (nyanMigen._is_signal(ctx, arg[0])):
             return True
         return False
 
     def _can_convert_sync_assign(arg, ctx):
-        if (nyanMigen._is_type(ctx, arg[1], "Signal()")):
+        if (nyanMigen._is_signal(ctx, arg[1])):
             return True
         return False
 
@@ -423,6 +506,14 @@ class nyanMigen:
                 value = code.value
         return (target, value)
 
+    def _parse_comb_assign_slice(code):
+        if isinstance(code, Assign):
+            if len(code.targets) == 1:
+                target = code.targets[0].value.id
+                slice = code.targets[0].slice
+                value = code.value
+        return (target, value, slice)
+
     def _parse_sync_assign(code):
         if isinstance(code, Assign):
             if len(code.targets) == 1:
@@ -431,14 +522,29 @@ class nyanMigen:
                 value = code.value
         return (domain, target, value)
 
-    def _dump_assign(m, d, t, v):
+    def _parse_sync_assign_slice(code):
+        if isinstance(code, Assign):
+            if len(code.targets) == 1:
+                domain = code.targets[0].value.value.id
+                target = code.targets[0].value.attr
+                slice = code.targets[0].slice
+                value = code.value
+        return (domain, target, value, slice)
+
+    def _dump_assign(m, d, t, v, s = None):
         if not d:
             d = "comb"
-        ret = ast.parse("m.d.sync += t.eq(v)").body[0]
+        if s:
+            ret = ast.parse("m.d.sync += t[s].eq(v)").body[0]
+            ret.value.func.value.value.id = t
+            ret.value.func.value.slice = s
+            ret.value.args = [v]
+        else:
+            ret = ast.parse("m.d.sync += t.eq(v)").body[0]
+            ret.value.func.value.id = t
+            ret.value.args = [v]
         ret.target.value.value.id = m
         ret.target.attr = d
-        ret.value.func.value.id = t
-        ret.value.args = [v]
         return ret
 
     @converter

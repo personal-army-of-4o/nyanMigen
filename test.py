@@ -3,27 +3,35 @@ from nmigen.cli import main
 from nyanMigen import nyanify
 
 
-@nyanify(generics_file="generics.json")
-class c:
+@nyanify(generics_file="config.json")
+class ram:
     def elaborate(self, platform):
-        a = Signal(w)
-        b = Signal()
-        c = Signal()
-        d = Signal(w)
-        f = Signal()
-        e = Signal()
+        n = 0
+        wr_en = Signal()
+        wr_addr = Signal(aw)
+        wr_data = Signal(dw)
+        rd_addr = Signal(aw)
+        rd_data = Signal(dw)
 
-        cc_flag0 = 1
+        mem = Array(Signal(dw) for i in range(2**aw))
 
-        if cc_flag0:
-            if f | f:
-                e = b | c
+        for i in range(n):
+            if reg_wr:
+                wr_en_reg = Signal()
+                wr_addr_reg = Signal(aw)
+                wr_data_reg = Signal(dw)
+
+                sync.wr_en_reg = wr_en
+                sync.wr_addr_reg = wr_addr
+                sync.wr_data_reg = wr_data
+
+                if wr_en_reg:
+                    sync.mem[wr_addr_reg] = wr_data_reg
             else:
-                e = b & c
-        elif cc_flag1:
-            if f:
-                e = b | c
-            else:
-                e = b & c
-        sync.a = d + e
+                if wr_en:
+                    sync.mem[wr_addr] = wr_data
 
+        rd_data = mem[rd_addr]
+
+if (__name__ == '__main__'):
+    ram.main()
