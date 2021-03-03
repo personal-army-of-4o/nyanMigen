@@ -5,7 +5,7 @@ from pprintast import pprintast as ppa
 from astunparse import unparse
 
 
-def nyanify(generics_file = None):
+def nyanify(generics_file = None, print_ctx = False):
     def foo(cls):
         cls_str = inspect.getsource(cls)
         cls_src = ast.parse(cls_str)
@@ -26,6 +26,9 @@ def nyanify(generics_file = None):
         cls_src.body = imports
         print(" ->\n```python\n" + unparse(cls_src) + "\n```")
         print(l, "chars ->", len(unparse(cls_src)), "chars")
+        if print_ctx:
+            for i in ctx:
+                print(i, ctx[i])
         return nyanMigen.compile(cls_src, classname)
     return foo
 
