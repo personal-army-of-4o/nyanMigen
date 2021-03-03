@@ -1,6 +1,6 @@
 import ast
 import inspect
-from ast import Assign, AugAssign, Name, Load, Store, Call, If, Subscript
+from ast import Assign, AugAssign, Name, Load, Store, Call, If, Subscript, Num
 from pprintast import pprintast as ppa
 from astunparse import unparse
 
@@ -26,8 +26,6 @@ def nyanify(generics_file = None):
         cls_src.body = imports
         print(" ->\n```python\n" + unparse(cls_src) + "\n```")
         print(l, "chars ->", len(unparse(cls_src)), "chars")
-        for i in ctx:
-            print(i, ctx[i])
         return nyanMigen.compile(cls_src, classname)
     return foo
 
@@ -35,6 +33,9 @@ converters = []
 def converter(foo):
     converters.append(foo)
     return foo
+
+class Failure(Exception):
+    pass
 
 class nyanMigen:
     def parse(cls, fn):
@@ -199,6 +200,8 @@ class nyanMigen:
                         i = ii
                         converted = True
                         break
+                except Failure:
+                    raise
                 except Exception as e:
                     pass
             if not converted:
@@ -300,12 +303,34 @@ class nyanMigen:
                     (code.orelse, ctx) = nyanMigen._nyanify(code.orelse, ctx)
                 return code
 
+    @converter
+    def _convert_for(code, ctx):
+        target = code.target
+        if not isinstance(target, Name):
+            ppa(code)
+            raise Failure("only one loop var is supported in for loops")
+        nyanMigen._parse_deps(code.iter, ctx)
+        nyanMigen._set_to_initialized(code.target.id, ctx)
+        (code.body, _) = nyanMigen._nyanify(code.body, ctx)
+        return code
+
+    @converter
+    def _convert_simple_assignment(code, ctx):
+        if(
+            isinstance(code, Assign) and
+            len(code.targets) == 1 and
+            isinstance(code.targets[0], Name) and
+            isinstance(code.targets[0].ctx, Store) and
+            isinstance(code.value, Num)
+        ):
+            return code
+
     def _add_target(target, ctx):
         if target in ctx:
             if nyanMigen._is_signal(ctx, target):
                 ctx[target]["is_driven"] = True
 
-    def _parse_deps(value, ctx):
+    def _parse_deps(value, ctx, is_func = False):
         ret = []
         if isinstance(value, list):
             for i in value:
@@ -313,16 +338,17 @@ class nyanMigen:
         else:
             try:
                 if isinstance(value.ctx, Load):
-                    if value.id not in ctx:
-                        ctx[value.id] = {}
-                    ctx[value.id]["driver"] = True
-                    ret.append(value.id)
-                    if nyanMigen._get_type(ctx, value.id) == None:
-                        nyanMigen._set_type(ctx, value.id, "other")
+                    if not is_func:
+                        if value.id not in ctx:
+                            ctx[value.id] = {}
+                        ctx[value.id]["driver"] = True
+                        ret.append(value.id)
+                        if nyanMigen._get_type(ctx, value.id) == None:
+                            nyanMigen._set_type(ctx, value.id, "other")
             except:
                 try:
                     for i in value.__dict__.keys():
-                        ret.extend(nyanMigen._parse_deps(getattr(value, i), ctx))
+                        ret.extend(nyanMigen._parse_deps(getattr(value, i), ctx, i == "func"))
                 except Exception as e:
                     pass
         return ret

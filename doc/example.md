@@ -1,6 +1,7 @@
 ```python
 class ram:
     def elaborate(self, platform):
+        n = 0
         wr_en = Signal()
         wr_addr = Signal(aw)
         wr_data = Signal(dw)
@@ -9,20 +10,21 @@ class ram:
 
         mem = Array(Signal(dw) for i in range(2**aw))
 
-        if reg_wr:
-            wr_en_reg = Signal()
-            wr_addr_reg = Signal(aw)
-            wr_data_reg = Signal(dw)
+        for i in range(n):
+            if reg_wr:
+                wr_en_reg = Signal()
+                wr_addr_reg = Signal(aw)
+                wr_data_reg = Signal(dw)
 
-            sync.wr_en_reg = wr_en
-            sync.wr_addr_reg = wr_addr
-            sync.wr_data_reg = wr_data
+                sync.wr_en_reg = wr_en
+                sync.wr_addr_reg = wr_addr
+                sync.wr_data_reg = wr_data
 
-            if wr_en_reg:
-                sync.mem[wr_addr_reg] = wr_data_reg
-        else:
-            if wr_en:
-                sync.mem[wr_addr] = wr_data
+                if wr_en_reg:
+                    sync.mem[wr_addr_reg] = wr_data_reg
+            else:
+                if wr_en:
+                    sync.mem[wr_addr] = wr_data
 
         rd_data = mem[rd_addr]
 
@@ -69,40 +71,29 @@ class ram(Elaboratable):
         reg_wr = self.reg_wr
         from nmigen import Module, Signal, Array
         m = Module()
+        n = 0
         wr_en = self.wr_en
         wr_addr = self.wr_addr
         wr_data = self.wr_data
         rd_addr = self.rd_addr
         rd_data = self.rd_data
         mem = Array((Signal(dw) for i in range((2 ** aw))))
-        if reg_wr:
-            wr_en_reg = Signal()
-            wr_addr_reg = Signal(aw)
-            wr_data_reg = Signal(dw)
-            m.d.sync += wr_en_reg.eq(wr_en)
-            m.d.sync += wr_addr_reg.eq(wr_addr)
-            m.d.sync += wr_data_reg.eq(wr_data)
-            with m.If(wr_en_reg):
-                m.d.sync += mem[wr_addr_reg].eq(wr_data_reg)
-        else:
-            with m.If(wr_en):
-                m.d.sync += mem[wr_addr].eq(wr_data)
+        for i in range(n):
+            if reg_wr:
+                wr_en_reg = Signal()
+                wr_addr_reg = Signal(aw)
+                wr_data_reg = Signal(dw)
+                m.d.sync += wr_en_reg.eq(wr_en)
+                m.d.sync += wr_addr_reg.eq(wr_addr)
+                m.d.sync += wr_data_reg.eq(wr_data)
+                with m.If(wr_en_reg):
+                    m.d.sync += mem[wr_addr_reg].eq(wr_data_reg)
+            else:
+                with m.If(wr_en):
+                    m.d.sync += mem[wr_addr].eq(wr_data)
         m.d.comb += rd_data.eq(mem[rd_addr])
         return m
 
 ```
-674 chars -> 1859 chars
-m {'initialized': True, 'type': 'Module()'}
-wr_en {'initialized': True, 'type': 'Signal()', 'driver': True, 'is_driven': False, 'args': []}
-wr_addr {'initialized': True, 'type': 'Signal()', 'driver': True, 'is_driven': False, 'args': [<_ast.Name object at 0xb5f3f6f0>]}
-aw {'driver': True, 'type': 'other', 'is_driven': False, 'args': None}
-wr_data {'initialized': True, 'type': 'Signal()', 'driver': True, 'is_driven': False, 'args': [<_ast.Name object at 0xb5f3f750>]}
-dw {'driver': True, 'type': 'other', 'is_driven': False, 'args': None}
-rd_addr {'initialized': True, 'type': 'Signal()', 'driver': True, 'is_driven': False, 'args': [<_ast.Name object at 0xb5f3f7d0>]}
-rd_data {'initialized': True, 'type': 'Signal()', 'driver': False, 'is_driven': True, 'args': [<_ast.Name object at 0xb5f3f890>]}
-mem {'initialized': True, 'type': 'Array()', 'driver': True, 'is_driven': True, 'args': [<_ast.GeneratorExp object at 0xb5f3f910>]}
-reg_wr {'driver': True, 'type': 'other', 'is_driven': False, 'args': None}
-wr_en_reg {'initialized': True, 'type': 'Signal()', 'driver': True, 'is_driven': True, 'args': []}
-wr_addr_reg {'initialized': True, 'type': 'Signal()', 'driver': True, 'is_driven': True, 'args': [<_ast.Name object at 0xb5f3fbf0>]}
-wr_data_reg {'initialized': True, 'type': 'Signal()', 'driver': True, 'is_driven': True, 'args': [<_ast.Name object at 0xb5f3fc70>]}
-{'dw': 8, 'aw': 2, 'reg_wr': False}
+763 chars -> 1948 chars
+{'dw': 8, 'aw': 10, 'reg_wr': False}
