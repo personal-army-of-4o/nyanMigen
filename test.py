@@ -6,6 +6,7 @@ from nyanMigen import nyanify
 @nyanify(generics_file="config.json")
 class ram:
     def elaborate(self, platform):
+        n = 0
         wr_en = Signal()
         wr_addr = Signal(aw)
         wr_data = Signal(dw)

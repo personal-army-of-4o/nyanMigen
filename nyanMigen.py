@@ -1,6 +1,6 @@
 import ast
 import inspect
-from ast import Assign, AugAssign, Name, Load, Store, Call, If, Subscript
+from ast import Assign, AugAssign, Name, Load, Store, Call, If, Subscript, Num
 from pprintast import pprintast as ppa
 from astunparse import unparse
 
@@ -313,6 +313,17 @@ class nyanMigen:
         nyanMigen._set_to_initialized(code.target.id, ctx)
         (code.body, _) = nyanMigen._nyanify(code.body, ctx)
         return code
+
+    @converter
+    def _convert_simple_assignment(code, ctx):
+        if(
+            isinstance(code, Assign) and
+            len(code.targets) == 1 and
+            isinstance(code.targets[0], Name) and
+            isinstance(code.targets[0].ctx, Store) and
+            isinstance(code.value, Num)
+        ):
+            return code
 
     def _add_target(target, ctx):
         if target in ctx:

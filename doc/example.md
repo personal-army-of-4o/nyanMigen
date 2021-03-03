@@ -1,6 +1,7 @@
 ```python
 class ram:
     def elaborate(self, platform):
+        n = 0
         wr_en = Signal()
         wr_addr = Signal(aw)
         wr_data = Signal(dw)
@@ -40,15 +41,14 @@ class ram(Elaboratable):
         with open('config.json', 'r') as read_file:
             generics = json.load(read_file)
         print(generics)
-        top = ram(generics['aw'], generics['dw'], generics['n'], generics['reg_wr'])
+        top = ram(generics['aw'], generics['dw'], generics['reg_wr'])
         from nmigen.cli import main
         main(top, name='ram', ports=top.ports())
 
-    def __init__(self, aw, dw, n, reg_wr):
+    def __init__(self, aw, dw, reg_wr):
         from nmigen import Module, Signal, Array
         self.aw = aw
         self.dw = dw
-        self.n = n
         self.reg_wr = reg_wr
         self.wr_en = Signal()
         self.wr_addr = Signal(aw)
@@ -68,10 +68,10 @@ class ram(Elaboratable):
     def elaborate(self, platform):
         aw = self.aw
         dw = self.dw
-        n = self.n
         reg_wr = self.reg_wr
         from nmigen import Module, Signal, Array
         m = Module()
+        n = 0
         wr_en = self.wr_en
         wr_addr = self.wr_addr
         wr_data = self.wr_data
@@ -95,4 +95,5 @@ class ram(Elaboratable):
         return m
 
 ```
-749 chars -> 1990 chars
+763 chars -> 1948 chars
+{'dw': 8, 'aw': 10, 'reg_wr': False}
