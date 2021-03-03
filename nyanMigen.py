@@ -9,8 +9,10 @@ def nyanify(generics_file = None):
     def foo(cls):
         cls_str = inspect.getsource(cls)
         cls_src = ast.parse(cls_str)
+        classname = cls_src.body[0].name
+        nyanMigen.add_heritage(cls_src)
         print("```python\n" + cls_str + "\n```")
-        l = len(unparse(cls_src))
+        l = len(cls_str)
         code = nyanMigen.parse(cls_src, "elaborate")
         (elaborate, ctx) = nyanMigen.fix(code)
         ports = nyanMigen.gen_ports(ctx)
@@ -18,11 +20,13 @@ def nyanify(generics_file = None):
         outputs = nyanMigen.gen_out_ports(ctx)
         init = nyanMigen.gen_init(ctx)
         e = nyanMigen.gen_exec(cls_src, ctx, generics_file)
-        cls_src.body[0].body = [init, ports, inputs, outputs, elaborate]
-        cls_src.body.append(e)
+        cls_src.body[0].body = [e, init, ports, inputs, outputs, elaborate]
+        imports = ast.parse("from nmigen import Elaboratable").body
+        imports.extend(cls_src.body)
+        cls_src.body = imports
         print(" ->\n```python\n" + unparse(cls_src) + "\n```")
         print(l, "chars ->", len(unparse(cls_src)), "chars")
-        return nyanMigen.compile(cls_src)
+        return nyanMigen.compile(cls_src, classname)
     return foo
 
 converters = []
@@ -40,14 +44,20 @@ class nyanMigen:
             if i.name == fn:
                 code = i
         if not code:
-            raise Exception("can't find `elaborate` method on class", cls.body[0].name)
+            raise Exception("can't find `" + fn + "` method on class", cls.body[0].name)
         return ast.parse(code)
 
-    def compile(thing):
+    def add_heritage(cls):
+        code = ast.parse("class foo(Elaboratable):\n    pass")
+        cls.body[0].bases = code.body[0].bases
+
+    def compile(thing, name = None):
         code = compile(filename="fakename", source=thing, mode="exec")
         mod = {}
         exec(code, mod)
-        return mod[thing.body[0].name]
+        if not name:
+            name = thing.body[0].name
+        return mod[name]
 
     def fix(code):
         nyanMigen._add_module(code)
@@ -74,7 +84,9 @@ class nyanMigen:
         for i in gnames:
             args_string += ", " + i
             generics.append(ast.parse("self." + i + " = " + i).body[0])
-        code = ast.parse("def __init__(self" + args_string + "):\n    pass").body[0]
+        code = ast.parse("def __init__(self" + args_string + "):\n" +
+            "    from nmigen import Module, Signal, Array\n"
+        ).body[0]
         body = generics
         for i in nyanMigen._get_ports(ctx):
             add = ast.parse("self.a = Signal()").body[0]
@@ -82,18 +94,18 @@ class nyanMigen:
             if ctx[i]["args"]:
                 add.value.args = ctx[i]["args"]
             body.append(add)
-        code.body = body
+        code.body.extend(body)
         return code
 
     def _add_elab_imports(code):
-        add = ast.parse("from nmigen import Module, Signal, If, Else, Array").body
+        add = ast.parse("from nmigen import Module, Signal, Array").body
         add.extend(code.body)
         code.body = add
 
     def gen_exec(cls, ctx, generics_file):
 
         def add_generics2str(string):
-            return "generics." + string
+            return "generics[\"" + string + "\"]"
 
         generics_str = ""
         args_str = ""
@@ -102,15 +114,16 @@ class nyanMigen:
             generics_str = (
                 "    import json\n" +
                 "    with open('" + generics_file + "', 'r') as read_file:\n" +
-                "        generics = json.load(read_file)\n"
+                "        generics = json.load(read_file)\n" +
+                "    print(generics)\n"
             )
             args_str = ', '.join(map(add_generics2str, generics))
         str = (
-            "if __name__ == \"__main__\":\n" +
+            "def main():\n" +
             generics_str +
             "    top = " + cls.body[0].name + "(" + args_str + ")\n" +
-            "    from nMigen.cli import main\n" +
-            "    main(top, top.ports())"
+            "    from nmigen.cli import main\n" +
+            "    main(top, name = \"" + cls.body[0].name + "\", ports = top.ports())"
         )
         code = ast.parse(str)
         return code.body[0]
@@ -297,8 +310,7 @@ class nyanMigen:
             ppa(code)
             raise Failure("only one loop var is supported in for loops")
         nyanMigen._parse_deps(code.iter, ctx)
-        add = ast.parse(code.target.id + " = 0").body
-        nyanMigen._nyanify(add, ctx)
+        nyanMigen._set_to_initialized(code.target.id, ctx)
         (code.body, _) = nyanMigen._nyanify(code.body, ctx)
         return code
 

@@ -28,17 +28,24 @@ class ram:
         rd_data = mem[rd_addr]
 
 ```
-failed to convert line
-Assign(targets=[
-    Name(id='i', ctx=Store()),
-  ], value=Num(n=0))
  ->
 ```python
 
+from nmigen import Elaboratable
 
-class ram():
+class ram(Elaboratable):
+
+    def main():
+        import json
+        with open('config.json', 'r') as read_file:
+            generics = json.load(read_file)
+        print(generics)
+        top = ram(generics['aw'], generics['dw'], generics['n'], generics['reg_wr'])
+        from nmigen.cli import main
+        main(top, name='ram', ports=top.ports())
 
     def __init__(self, aw, dw, n, reg_wr):
+        from nmigen import Module, Signal, Array
         self.aw = aw
         self.dw = dw
         self.n = n
@@ -63,7 +70,7 @@ class ram():
         dw = self.dw
         n = self.n
         reg_wr = self.reg_wr
-        from nmigen import Module, Signal, If, Else, Array
+        from nmigen import Module, Signal, Array
         m = Module()
         wr_en = self.wr_en
         wr_addr = self.wr_addr
@@ -86,13 +93,6 @@ class ram():
                     m.d.sync += mem[wr_addr].eq(wr_data)
         m.d.comb += rd_data.eq(mem[rd_addr])
         return m
-if (__name__ == '__main__'):
-    import json
-    with open('config.json', 'r') as read_file:
-        generics = json.load(read_file)
-    top = ram(generics.aw, generics.dw, generics.n, generics.reg_wr)
-    from nMigen.cli import main
-    main(top, top.ports())
 
 ```
-731 chars -> 1841 chars
+749 chars -> 1990 chars

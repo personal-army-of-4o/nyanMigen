@@ -32,3 +32,5 @@ class ram:
 
         rd_data = mem[rd_addr]
 
+if (__name__ == '__main__'):
+    ram.main()
