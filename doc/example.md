@@ -95,5 +95,4 @@ class ram(Elaboratable):
         return m
 
 ```
-763 chars -> 1948 chars
 {'dw': 8, 'aw': 10, 'reg_wr': False}

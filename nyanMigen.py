@@ -7,12 +7,12 @@ from astunparse import unparse
 
 def nyanify(generics_file = None, print_ctx = False):
     def foo(cls):
+        statistics = {}
         cls_str = inspect.getsource(cls)
         cls_src = ast.parse(cls_str)
         classname = cls_src.body[0].name
         nyanMigen.add_heritage(cls_src)
         print("```python\n" + cls_str + "\n```")
-        l = len(cls_str)
         code = nyanMigen.parse(cls_src, "elaborate")
         (elaborate, ctx) = nyanMigen.fix(code)
         ports = nyanMigen.gen_ports(ctx)
@@ -25,12 +25,47 @@ def nyanify(generics_file = None, print_ctx = False):
         imports.extend(cls_src.body)
         cls_src.body = imports
         print(" ->\n```python\n" + unparse(cls_src) + "\n```")
-        print(l, "chars ->", len(unparse(cls_src)), "chars")
+        s = nyanStatistics(cls, cls_src, ctx, classname)
+        s.dump_statistics()
         if print_ctx:
             for i in ctx:
                 print(i, ctx[i])
         return nyanMigen.compile(cls_src, classname)
     return foo
+
+class nyanStatistics:
+    def __init__(self, cls, cls_fixed, ctx, classname):
+        def foo (a):
+            return a + ": " + ctx[a]["type"]
+        self.classname = classname
+        self.statistics = {}
+        self.statistics["source chars"] = len(inspect.getsource(cls))
+        self.statistics["result chars"] = len(unparse(cls_fixed))
+        self.statistics["decompression ratio"] = len(unparse(cls_fixed))/len(inspect.getsource(cls))
+        self.statistics["inputs(" + str(len(nyanMigen._get_inputs(ctx))) +")"] = list(map(foo, nyanMigen._get_inputs(ctx)))
+        self.statistics["outputs(" + str(len(nyanMigen._get_outputs(ctx))) + ")"] = list(map(foo, nyanMigen._get_outputs(ctx)))
+        self.statistics["generics(" + str(len(nyanMigen._get_generics(ctx))) + ")"] = nyanMigen._get_generics(ctx)
+        self.statistics["domains(" + str(len(self.domains(ctx))) + ")"] = self.domains(ctx)
+
+    def domains(self, ctx):
+        dl = []
+        for i in ctx:
+            try:
+                d = ctx[i]["domain"]
+                if d:
+                    if d not in dl:
+                        dl.append(d)
+            except:
+                pass
+        return dl
+
+    def dump_statistics(self):
+        s = self.statistics
+        stat = ""
+        for i in s:
+            stat += i + ": " + str(s[i]) + "\n"
+        with open(self.classname + ".stat", 'w') as f:
+            f.write(stat)
 
 converters = []
 def converter(foo):
@@ -298,7 +333,7 @@ class nyanMigen:
             nyanMigen._parse_deps(value, ctx)
             if slice:
                 nyanMigen._parse_deps(slice, ctx)
-            nyanMigen._add_target(target, ctx)
+            nyanMigen._add_target(target, ctx, domain = domain)
             return nyanMigen._dump_assign(module, domain, target, value, slice)
         else:
             raise Exception()
@@ -339,10 +374,14 @@ class nyanMigen:
         ):
             return code
 
-    def _add_target(target, ctx):
+    def _add_target(target, ctx, domain = None):
         if target in ctx:
             if nyanMigen._is_signal(ctx, target):
                 ctx[target]["is_driven"] = True
+                if "domain" in ctx[target]:
+                    if domain != ctx[target]["domain"]:
+                        print("warning: redefining signal", target, "domain")
+                ctx[target]["domain"] = domain
 
     def _parse_deps(value, ctx, is_func = False):
         ret = []
