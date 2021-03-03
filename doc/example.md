@@ -9,33 +9,39 @@ class ram:
 
         mem = Array(Signal(dw) for i in range(2**aw))
 
-        if reg_wr:
-            wr_en_reg = Signal()
-            wr_addr_reg = Signal(aw)
-            wr_data_reg = Signal(dw)
+        for i in range(n):
+            if reg_wr:
+                wr_en_reg = Signal()
+                wr_addr_reg = Signal(aw)
+                wr_data_reg = Signal(dw)
 
-            sync.wr_en_reg = wr_en
-            sync.wr_addr_reg = wr_addr
-            sync.wr_data_reg = wr_data
+                sync.wr_en_reg = wr_en
+                sync.wr_addr_reg = wr_addr
+                sync.wr_data_reg = wr_data
 
-            if wr_en_reg:
-                sync.mem[wr_addr_reg] = wr_data_reg
-        else:
-            if wr_en:
-                sync.mem[wr_addr] = wr_data
+                if wr_en_reg:
+                    sync.mem[wr_addr_reg] = wr_data_reg
+            else:
+                if wr_en:
+                    sync.mem[wr_addr] = wr_data
 
         rd_data = mem[rd_addr]
 
 ```
+failed to convert line
+Assign(targets=[
+    Name(id='i', ctx=Store()),
+  ], value=Num(n=0))
  ->
 ```python
 
 
 class ram():
 
-    def __init__(self, aw, dw, reg_wr):
+    def __init__(self, aw, dw, n, reg_wr):
         self.aw = aw
         self.dw = dw
+        self.n = n
         self.reg_wr = reg_wr
         self.wr_en = Signal()
         self.wr_addr = Signal(aw)
@@ -55,6 +61,7 @@ class ram():
     def elaborate(self, platform):
         aw = self.aw
         dw = self.dw
+        n = self.n
         reg_wr = self.reg_wr
         from nmigen import Module, Signal, If, Else, Array
         m = Module()
@@ -64,40 +71,28 @@ class ram():
         rd_addr = self.rd_addr
         rd_data = self.rd_data
         mem = Array((Signal(dw) for i in range((2 ** aw))))
-        if reg_wr:
-            wr_en_reg = Signal()
-            wr_addr_reg = Signal(aw)
-            wr_data_reg = Signal(dw)
-            m.d.sync += wr_en_reg.eq(wr_en)
-            m.d.sync += wr_addr_reg.eq(wr_addr)
-            m.d.sync += wr_data_reg.eq(wr_data)
-            with m.If(wr_en_reg):
-                m.d.sync += mem[wr_addr_reg].eq(wr_data_reg)
-        else:
-            with m.If(wr_en):
-                m.d.sync += mem[wr_addr].eq(wr_data)
+        for i in range(n):
+            if reg_wr:
+                wr_en_reg = Signal()
+                wr_addr_reg = Signal(aw)
+                wr_data_reg = Signal(dw)
+                m.d.sync += wr_en_reg.eq(wr_en)
+                m.d.sync += wr_addr_reg.eq(wr_addr)
+                m.d.sync += wr_data_reg.eq(wr_data)
+                with m.If(wr_en_reg):
+                    m.d.sync += mem[wr_addr_reg].eq(wr_data_reg)
+            else:
+                with m.If(wr_en):
+                    m.d.sync += mem[wr_addr].eq(wr_data)
         m.d.comb += rd_data.eq(mem[rd_addr])
         return m
 if (__name__ == '__main__'):
     import json
     with open('config.json', 'r') as read_file:
         generics = json.load(read_file)
-    top = ram(generics.aw, generics.dw, generics.reg_wr)
+    top = ram(generics.aw, generics.dw, generics.n, generics.reg_wr)
     from nMigen.cli import main
     main(top, top.ports())
 
 ```
-660 chars -> 1713 chars
-m {'initialized': True, 'type': 'Module()'}
-wr_en {'initialized': True, 'type': 'Signal()', 'driver': True, 'is_driven': False, 'args': []}
-wr_addr {'initialized': True, 'type': 'Signal()', 'driver': True, 'is_driven': False, 'args': [<_ast.Name object at 0xb5f71ef0>]}
-aw {'driver': True, 'type': 'other', 'is_driven': False, 'args': None}
-wr_data {'initialized': True, 'type': 'Signal()', 'driver': True, 'is_driven': False, 'args': [<_ast.Name object at 0xb5f71550>]}
-dw {'driver': True, 'type': 'other', 'is_driven': False, 'args': None}
-rd_addr {'initialized': True, 'type': 'Signal()', 'driver': True, 'is_driven': False, 'args': [<_ast.Name object at 0xb5f71630>]}
-rd_data {'initialized': True, 'type': 'Signal()', 'driver': False, 'is_driven': True, 'args': [<_ast.Name object at 0xb5f716b0>]}
-mem {'initialized': True, 'type': 'Array()', 'driver': True, 'is_driven': True, 'args': [<_ast.GeneratorExp object at 0xb5f71770>]}
-reg_wr {'driver': True, 'type': 'other', 'is_driven': False, 'args': None}
-wr_en_reg {'initialized': True, 'type': 'Signal()', 'driver': True, 'is_driven': True, 'args': []}
-wr_addr_reg {'initialized': True, 'type': 'Signal()', 'driver': True, 'is_driven': True, 'args': [<_ast.Name object at 0xb5f71a10>]}
-wr_data_reg {'initialized': True, 'type': 'Signal()', 'driver': True, 'is_driven': True, 'args': [<_ast.Name object at 0xb5f71ad0>]}
+731 chars -> 1841 chars
