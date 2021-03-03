@@ -446,9 +446,7 @@ class nyanMigen:
         return ret
 
     def _can_convert_comb_assign(arg, ctx):
-        if (not isinstance(arg[1], Call) and
-            nyanMigen._is_signal(ctx, arg[0])
-        ):
+        if (nyanMigen._is_signal(ctx, arg[0])):
             return True
         return False
 
