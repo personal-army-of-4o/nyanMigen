@@ -30,10 +30,21 @@ class ram:
  ->
 ```python
 
+from nmigen import Elaboratable
 
-class ram():
+class ram(Elaboratable):
+
+    def main():
+        import json
+        with open('config.json', 'r') as read_file:
+            generics = json.load(read_file)
+        print(generics)
+        top = ram(generics['aw'], generics['dw'], generics['reg_wr'])
+        from nmigen.cli import main
+        main(top, name='ram', ports=top.ports())
 
     def __init__(self, aw, dw, reg_wr):
+        from nmigen import Module, Signal, Array
         self.aw = aw
         self.dw = dw
         self.reg_wr = reg_wr
@@ -56,7 +67,7 @@ class ram():
         aw = self.aw
         dw = self.dw
         reg_wr = self.reg_wr
-        from nmigen import Module, Signal, If, Else, Array
+        from nmigen import Module, Signal, Array
         m = Module()
         wr_en = self.wr_en
         wr_addr = self.wr_addr
@@ -78,26 +89,20 @@ class ram():
                 m.d.sync += mem[wr_addr].eq(wr_data)
         m.d.comb += rd_data.eq(mem[rd_addr])
         return m
-if (__name__ == '__main__'):
-    import json
-    with open('config.json', 'r') as read_file:
-        generics = json.load(read_file)
-    top = ram(generics.aw, generics.dw, generics.reg_wr)
-    from nMigen.cli import main
-    main(top, top.ports())
 
 ```
-660 chars -> 1713 chars
+674 chars -> 1859 chars
 m {'initialized': True, 'type': 'Module()'}
 wr_en {'initialized': True, 'type': 'Signal()', 'driver': True, 'is_driven': False, 'args': []}
-wr_addr {'initialized': True, 'type': 'Signal()', 'driver': True, 'is_driven': False, 'args': [<_ast.Name object at 0xb5f71ef0>]}
+wr_addr {'initialized': True, 'type': 'Signal()', 'driver': True, 'is_driven': False, 'args': [<_ast.Name object at 0xb5f3f6f0>]}
 aw {'driver': True, 'type': 'other', 'is_driven': False, 'args': None}
-wr_data {'initialized': True, 'type': 'Signal()', 'driver': True, 'is_driven': False, 'args': [<_ast.Name object at 0xb5f71550>]}
+wr_data {'initialized': True, 'type': 'Signal()', 'driver': True, 'is_driven': False, 'args': [<_ast.Name object at 0xb5f3f750>]}
 dw {'driver': True, 'type': 'other', 'is_driven': False, 'args': None}
-rd_addr {'initialized': True, 'type': 'Signal()', 'driver': True, 'is_driven': False, 'args': [<_ast.Name object at 0xb5f71630>]}
-rd_data {'initialized': True, 'type': 'Signal()', 'driver': False, 'is_driven': True, 'args': [<_ast.Name object at 0xb5f716b0>]}
-mem {'initialized': True, 'type': 'Array()', 'driver': True, 'is_driven': True, 'args': [<_ast.GeneratorExp object at 0xb5f71770>]}
+rd_addr {'initialized': True, 'type': 'Signal()', 'driver': True, 'is_driven': False, 'args': [<_ast.Name object at 0xb5f3f7d0>]}
+rd_data {'initialized': True, 'type': 'Signal()', 'driver': False, 'is_driven': True, 'args': [<_ast.Name object at 0xb5f3f890>]}
+mem {'initialized': True, 'type': 'Array()', 'driver': True, 'is_driven': True, 'args': [<_ast.GeneratorExp object at 0xb5f3f910>]}
 reg_wr {'driver': True, 'type': 'other', 'is_driven': False, 'args': None}
 wr_en_reg {'initialized': True, 'type': 'Signal()', 'driver': True, 'is_driven': True, 'args': []}
-wr_addr_reg {'initialized': True, 'type': 'Signal()', 'driver': True, 'is_driven': True, 'args': [<_ast.Name object at 0xb5f71a10>]}
-wr_data_reg {'initialized': True, 'type': 'Signal()', 'driver': True, 'is_driven': True, 'args': [<_ast.Name object at 0xb5f71ad0>]}
+wr_addr_reg {'initialized': True, 'type': 'Signal()', 'driver': True, 'is_driven': True, 'args': [<_ast.Name object at 0xb5f3fbf0>]}
+wr_data_reg {'initialized': True, 'type': 'Signal()', 'driver': True, 'is_driven': True, 'args': [<_ast.Name object at 0xb5f3fc70>]}
+{'dw': 8, 'aw': 2, 'reg_wr': False}
