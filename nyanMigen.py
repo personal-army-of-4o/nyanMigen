@@ -25,12 +25,13 @@ def nyanify(generics_file = None, print_ctx = False):
         imports = ast.parse("from nmigen import *\nfrom nmigen.cli import main").body
         imports.extend(cls_src.body)
         cls_src.body = imports
-        print(" ->\n```python\n" + unparse(cls_src) + "\n```")
         s = nyanStatistics(cls, cls_src, ctx, classname)
         s.dump_statistics()
         if print_ctx:
             for i in ctx:
                 print(i, ctx[i])
+        nyanMigen.propagate_constants(cls_src, ctx)
+        print(" ->\n```python\n" + unparse(cls_src) + "\n```")
         return nyanMigen.compile(cls_src, classname)
     return foo
 
@@ -76,9 +77,27 @@ def converter(foo):
 class Failure(Exception):
     pass
 
+class Context:
+    def __init__(self, ctx):
+        self.ctx = ctx
+
+    @property
+    def python_constants(self):
+        ret = []
+        for i in self.ctx:
+            if nyanMigen._is_type(self.ctx, i, "py_const"):
+                ret.append(i)
+        return ret
+
 class nyanMigen:
     def fix_case(s):
         return s.replace("with switch", "with m.Switch").replace("with case", "with m.Case").replace("with default", "with m.Default()")
+
+    def propagate_constants(cls_src, ctx):
+        c = Context(ctx)
+        consts = c.python_constants
+        for i in consts:
+            nyanMigen._expand_const(cls_src, i, ctx[i]["args"])
 
     def parse(cls, fn):
         code = None
@@ -367,6 +386,8 @@ class nyanMigen:
             isinstance(code.targets[0].ctx, Store) and
             isinstance(code.value, Num)
         ):
+            nyanMigen._set_type(ctx, code.targets[0].id, "py_const")
+            ctx[code.targets[0].id]["args"] = code.value
             return code
 
     @converter
@@ -374,6 +395,55 @@ class nyanMigen:
         nyanMigen._parse_deps(code.items, ctx)
         (code.body, _) = nyanMigen._nyanify(code.body, ctx)
         return code
+
+    @converter
+    def _memory_converter(code, ctx):
+        if (
+            code.value.func.id == "Memory" and
+            isinstance(code.value.func.ctx, Load)
+        ):
+            kws = code.value.keywords
+            d = {}
+            # get args
+            for i in kws:
+                if i.arg == "width" or i.arg == "depth" or i.arg == "init":
+                    nyanMigen._parse_deps(i.value, ctx)
+                    d[i.arg] = unparse(i.value)[:-1]
+                if i.arg == "we" or i.arg == "wa" or i.arg == "wd" or i.arg == "ra" or i.arg == "rd":
+                    if i.value.id not in ctx:
+                        raise Failure("mem generation failed: signal " + i.value.id + " is not known")
+                    if not (isinstance(i.value, Name) and isinstance(i.value.ctx, Load)):
+                        raise Failure("mem generation failed: argument " + i.value.id + " value should be a plain name")
+                    d[i.arg] = i.value.id
+            # set driver and is_driven flags
+            for i in ["we", "wa", "wd", "ra"]:
+                ctx[d[i]]["driver"] = True
+            ctx[d["rd"]]["is_driven"] = True
+            # generate nMigen Memory instance
+            try:
+                nyanMigen.mem_n += 1
+            except:
+                nyanMigen.mem_n = 0
+            mem_n = nyanMigen.mem_n
+            rdp = "rdport" + str(mem_n)
+            wrp = "wrport" + str(mem_n)
+            initstr = ""
+            if "init" in d:
+                initstr = ", init = " + d["init"]
+            s = (
+                "mem = Memory(width = " + d["width"] + ", depth = " + d["depth"] + initstr + ")\n" +
+                "m.submodules." + rdp + " = " + rdp + " = mem.read_port()\n" +
+                "m.submodules." + wrp + " = " + wrp + " = mem.write_port()\n" +
+                "m.d.comb += [\n" +
+                "    " + rdp + ".addr.eq(" + d["ra"] + "),\n" +
+                "    " + d["rd"] + ".eq(" + rdp + ".data),\n" +
+                "    " + wrp + ".addr.eq(" + d["wa"] + "),\n" +
+                "    " + wrp + ".data.eq(" + d["wd"] + "),\n" +
+                "    " + wrp + ".en.eq(" + d["we"] + "),\n" +
+                "]"
+            )
+            ret = ast.parse(s).body
+            return ret
 
     def _add_target(target, ctx, domain = None):
         if target in ctx:
@@ -406,6 +476,25 @@ class nyanMigen:
                 except Exception as e:
                     pass
         return ret
+
+    def _expand_const(src, n, v):
+        if isinstance(src, list):
+            for i in range(len(src)):
+                ret = nyanMigen._expand_const(src[i], n, v)
+                if ret:
+                    src[i] = ret
+        else:
+            try:
+                if isinstance(src.ctx, Load) and src.id == n:
+                    return v
+            except:
+                try:
+                    for i in src.__dict__.keys():
+                        ret = nyanMigen._expand_const(getattr(src, i), n, v)
+                        if ret:
+                            setattr(src, i, v)
+                except Exception as e:
+                    pass
 
     def _get_ports(ctx):
         ret = nyanMigen._get_inputs(ctx)

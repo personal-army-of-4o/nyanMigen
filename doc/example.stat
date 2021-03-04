@@ -1,7 +1,7 @@
-source chars: 1206
-result chars: 2409
-decompression ratio: 1.9975124378109452
+source chars: 303
+result chars: 1429
+decompression ratio: 4.7161716171617165
 inputs(4): ['wr_en: Signal()', 'wr_addr: Signal()', 'wr_data: Signal()', 'rd_addr: Signal()']
 outputs(1): ['rd_data: Signal()']
-generics(3): ['aw', 'dw', 'reg_wr']
-domains(1): ['sync']
+generics(2): ['aw', 'dw']
+domains(0): []
