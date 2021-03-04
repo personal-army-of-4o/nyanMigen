@@ -624,18 +624,24 @@ class nyanMigen:
     def _dump_assign(m, d, t, v, s = None):
         if not d:
             d = "comb"
+        ret = ast.parse("m.d.sync += t.eq(v)").body[0]
+        ret.value.func.value.id = t
+        ret.value.args = [v]
         if s:
-            ret = ast.parse("m.d.sync += t[s].eq(v)").body[0]
-            ret.value.func.value.value.id = t
-            ret.value.func.value.slice = s
-            ret.value.args = [v]
-        else:
-            ret = ast.parse("m.d.sync += t.eq(v)").body[0]
-            ret.value.func.value.id = t
-            ret.value.args = [v]
+            if isinstance(s, list):
+                for i in range(len(s)):
+                    ret.value.func.value = nyanMigen._slice(ret.value.func.value, s[i])
+            else:
+                ret.value.func.value = nyanMigen._slice(ret.value.func.value, s)
         ret.target.value.value.id = m
         ret.target.attr = d
         return ret
+
+    def _slice(code, s):
+        new = ast.parse("a = b[c]").body[0].value
+        new.value = code
+        new.slice = s
+        return new
 
     @converter
     def _convert_branching(code, ctx):
