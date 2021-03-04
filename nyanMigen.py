@@ -9,6 +9,7 @@ def nyanify(generics_file = None, print_ctx = False):
     def foo(cls):
         statistics = {}
         cls_str = inspect.getsource(cls)
+        cls_str = nyanMigen.fix_case(cls_str)
         cls_src = ast.parse(cls_str)
         classname = cls_src.body[0].name
         nyanMigen.add_heritage(cls_src)
@@ -89,6 +90,9 @@ class Context:
         return ret
 
 class nyanMigen:
+    def fix_case(s):
+        return s.replace("with switch", "with m.Switch").replace("with case", "with m.Case").replace("with default", "with m.Default()")
+
     def propagate_constants(cls_src, ctx):
         c = Context(ctx)
         consts = c.python_constants
@@ -385,6 +389,12 @@ class nyanMigen:
             nyanMigen._set_type(ctx, code.targets[0].id, "py_const")
             ctx[code.targets[0].id]["args"] = code.value
             return code
+
+    @converter
+    def _convert_generic_with(code, ctx):
+        nyanMigen._parse_deps(code.items, ctx)
+        (code.body, _) = nyanMigen._nyanify(code.body, ctx)
+        return code
 
     @converter
     def _memory_converter(code, ctx):

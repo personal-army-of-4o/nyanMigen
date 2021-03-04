@@ -4,8 +4,8 @@ class ram:
         wr_en = Signal()
         wr_addr = Signal(aw)
         wr_data = Signal(dw)
-        rd_addr = Signal(aw)
-        rd_data = Signal(dw)
+        rd_addr = Signal(aw+2)
+        rd_data = Signal(dw//4)
 
         Memory(width = dw, depth = 2**aw, we = wr_en, wa = wr_addr, wd = wr_data, ra = rd_addr, rd = rd_data)
 
@@ -33,8 +33,8 @@ class ram(Elaboratable):
         self.wr_en = Signal()
         self.wr_addr = Signal(aw)
         self.wr_data = Signal(dw)
-        self.rd_addr = Signal(aw)
-        self.rd_data = Signal(dw)
+        self.rd_addr = Signal((aw + 2))
+        self.rd_data = Signal((dw // 4))
 
     def ports(self):
         return [self.wr_en, self.wr_addr, self.wr_data, self.rd_addr, self.rd_data]
