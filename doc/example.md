@@ -5,10 +5,16 @@ class ram:
         wr_en = Signal()
         wr_addr = Signal(aw)
         wr_data = Signal(dw)
-        rd_addr = Signal(aw)
-        rd_data = Signal(dw)
+        rd_addr = Signal(aw+2)
+        rd_data = Signal(dw//4)
 
         mem = Array(Signal(dw) for i in range(2**aw))
+        sData = Signal(dw)
+        sRd_addr = Signal(aw)
+        sSel = Signal(2)
+
+        sRd_addr = rd_addr[2:]
+        sSel = rd_addr[0:2]
 
         for i in range(n):
             if reg_wr:
@@ -26,7 +32,17 @@ class ram:
                 if wr_en:
                     sync.mem[wr_addr] = wr_data
 
-        rd_data = mem[rd_addr]
+        sData = mem[sRd_addr]
+
+        with m.Switch(sSel):
+            with m.Case(0):
+                rd_data = sData[0:dw]
+            with m.Case(1):
+                rd_data = sData[dw:dw*2]
+            with m.Case(2):
+                rd_data = sData[dw*2:dw*3]
+            with m.Default():
+                rd_data = sData[dw*3:dw*4]
 
 ```
  ->
@@ -53,8 +69,8 @@ class ram(Elaboratable):
         self.wr_en = Signal()
         self.wr_addr = Signal(aw)
         self.wr_data = Signal(dw)
-        self.rd_addr = Signal(aw)
-        self.rd_data = Signal(dw)
+        self.rd_addr = Signal((aw + 2))
+        self.rd_data = Signal((dw // 4))
 
     def ports(self):
         return [self.wr_en, self.wr_addr, self.wr_data, self.rd_addr, self.rd_data]
@@ -77,6 +93,11 @@ class ram(Elaboratable):
         rd_addr = self.rd_addr
         rd_data = self.rd_data
         mem = Array((Signal(dw) for i in range((2 ** aw))))
+        sData = Signal(dw)
+        sRd_addr = Signal(aw)
+        sSel = Signal(2)
+        m.d.comb += sRd_addr.eq(rd_addr[2:])
+        m.d.comb += sSel.eq(rd_addr[0:2])
         for i in range(n):
             if reg_wr:
                 wr_en_reg = Signal()
@@ -90,7 +111,16 @@ class ram(Elaboratable):
             else:
                 with m.If(wr_en):
                     m.d.sync += mem[wr_addr].eq(wr_data)
-        m.d.comb += rd_data.eq(mem[rd_addr])
+        m.d.comb += sData.eq(mem[sRd_addr])
+        with m.Switch(sSel):
+            with m.Case(0):
+                m.d.comb += rd_data.eq(sData[0:dw])
+            with m.Case(1):
+                m.d.comb += rd_data.eq(sData[dw:(dw * 2)])
+            with m.Case(2):
+                m.d.comb += rd_data.eq(sData[(dw * 2):(dw * 3)])
+            with m.Default():
+                m.d.comb += rd_data.eq(sData[(dw * 3):(dw * 4)])
         return m
 
 ```

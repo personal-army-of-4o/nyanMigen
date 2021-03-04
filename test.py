@@ -10,10 +10,16 @@ class ram:
         wr_en = Signal()
         wr_addr = Signal(aw)
         wr_data = Signal(dw)
-        rd_addr = Signal(aw)
-        rd_data = Signal(dw)
+        rd_addr = Signal(aw+2)
+        rd_data = Signal(dw//4)
 
         mem = Array(Signal(dw) for i in range(2**aw))
+        sData = Signal(dw)
+        sRd_addr = Signal(aw)
+        sSel = Signal(2)
+
+        sRd_addr = rd_addr[2:]
+        sSel = rd_addr[0:2]
 
         for i in range(n):
             if reg_wr:
@@ -31,7 +37,17 @@ class ram:
                 if wr_en:
                     sync.mem[wr_addr] = wr_data
 
-        rd_data = mem[rd_addr]
+        sData = mem[sRd_addr]
+
+        with switch(sSel):
+            with case(0):
+                rd_data = sData[0:dw]
+            with case(1):
+                rd_data = sData[dw:dw*2]
+            with case(2):
+                rd_data = sData[dw*2:dw*3]
+            with default:
+                rd_data = sData[dw*3:dw*4]
 
 if (__name__ == '__main__'):
     ram.main()
