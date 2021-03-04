@@ -365,6 +365,55 @@ class nyanMigen:
         ):
             return code
 
+    @converter
+    def _memory_converter(code, ctx):
+        if (
+            code.value.func.id == "Memory" and
+            isinstance(code.value.func.ctx, Load)
+        ):
+            kws = code.value.keywords
+            d = {}
+            # get args
+            for i in kws:
+                if i.arg == "width" or i.arg == "depth" or i.arg == "init":
+                    nyanMigen._parse_deps(i.value, ctx)
+                    d[i.arg] = unparse(i.value)[:-1]
+                if i.arg == "we" or i.arg == "wa" or i.arg == "wd" or i.arg == "ra" or i.arg == "rd":
+                    if i.value.id not in ctx:
+                        raise Failure("mem generation failed: signal " + i.value.id + " is not known")
+                    if not (isinstance(i.value, Name) and isinstance(i.value.ctx, Load)):
+                        raise Failure("mem generation failed: argument " + i.value.id + " value should be a plain name")
+                    d[i.arg] = i.value.id
+            # set driver and is_driven flags
+            for i in ["we", "wa", "wd", "ra"]:
+                ctx[d[i]]["driver"] = True
+            ctx[d["rd"]]["is_driven"] = True
+            # generate nMigen Memory instance
+            try:
+                nyanMigen.mem_n += 1
+            except:
+                nyanMigen.mem_n = 0
+            mem_n = nyanMigen.mem_n
+            rdp = "rdport" + str(mem_n)
+            wrp = "wrport" + str(mem_n)
+            initstr = ""
+            if "init" in d:
+                initstr = ", init = " + d["init"]
+            s = (
+                "mem = Memory(width = " + d["width"] + ", depth = " + d["depth"] + initstr + ")\n" +
+                "m.submodules." + rdp + " = " + rdp + " = mem.read_port()\n" +
+                "m.submodules." + wrp + " = " + wrp + " = mem.write_port()\n" +
+                "m.d.comb += [\n" +
+                "    " + rdp + ".addr.eq(" + d["ra"] + "),\n" +
+                "    " + d["rd"] + ".eq(" + rdp + ".data),\n" +
+                "    " + wrp + ".addr.eq(" + d["wa"] + "),\n" +
+                "    " + wrp + ".data.eq(" + d["wd"] + "),\n" +
+                "    " + wrp + ".en.eq(" + d["we"] + "),\n" +
+                "]"
+            )
+            ret = ast.parse(s).body
+            return ret
+
     def _add_target(target, ctx, domain = None):
         if target in ctx:
             if nyanMigen._is_signal(ctx, target):
