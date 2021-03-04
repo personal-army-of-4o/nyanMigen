@@ -32,7 +32,8 @@ class ram:
  ->
 ```python
 
-from nmigen import Elaboratable
+from nmigen import *
+from nmigen.cli import main
 
 class ram(Elaboratable):
 
@@ -42,11 +43,10 @@ class ram(Elaboratable):
             generics = json.load(read_file)
         print(generics)
         top = ram(generics['aw'], generics['dw'], generics['reg_wr'])
-        from nmigen.cli import main
         main(top, name='ram', ports=top.ports())
 
     def __init__(self, aw, dw, reg_wr):
-        from nmigen import Module, Signal, Array
+        pass
         self.aw = aw
         self.dw = dw
         self.reg_wr = reg_wr
@@ -69,7 +69,6 @@ class ram(Elaboratable):
         aw = self.aw
         dw = self.dw
         reg_wr = self.reg_wr
-        from nmigen import Module, Signal, Array
         m = Module()
         n = 0
         wr_en = self.wr_en
