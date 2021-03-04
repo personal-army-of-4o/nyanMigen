@@ -24,12 +24,13 @@ def nyanify(generics_file = None, print_ctx = False):
         imports = ast.parse("from nmigen import *\nfrom nmigen.cli import main").body
         imports.extend(cls_src.body)
         cls_src.body = imports
-        print(" ->\n```python\n" + unparse(cls_src) + "\n```")
         s = nyanStatistics(cls, cls_src, ctx, classname)
         s.dump_statistics()
         if print_ctx:
             for i in ctx:
                 print(i, ctx[i])
+        nyanMigen.propagate_constants(cls_src, ctx)
+        print(" ->\n```python\n" + unparse(cls_src) + "\n```")
         return nyanMigen.compile(cls_src, classname)
     return foo
 
@@ -75,7 +76,25 @@ def converter(foo):
 class Failure(Exception):
     pass
 
+class Context:
+    def __init__(self, ctx):
+        self.ctx = ctx
+
+    @property
+    def python_constants(self):
+        ret = []
+        for i in self.ctx:
+            if nyanMigen._is_type(self.ctx, i, "py_const"):
+                ret.append(i)
+        return ret
+
 class nyanMigen:
+    def propagate_constants(cls_src, ctx):
+        c = Context(ctx)
+        consts = c.python_constants
+        for i in consts:
+            nyanMigen._expand_const(cls_src, i, ctx[i]["args"])
+
     def parse(cls, fn):
         code = None
         for i in cls.body[0].body:
@@ -363,6 +382,8 @@ class nyanMigen:
             isinstance(code.targets[0].ctx, Store) and
             isinstance(code.value, Num)
         ):
+            nyanMigen._set_type(ctx, code.targets[0].id, "py_const")
+            ctx[code.targets[0].id]["args"] = code.value
             return code
 
     @converter
@@ -445,6 +466,25 @@ class nyanMigen:
                 except Exception as e:
                     pass
         return ret
+
+    def _expand_const(src, n, v):
+        if isinstance(src, list):
+            for i in range(len(src)):
+                ret = nyanMigen._expand_const(src[i], n, v)
+                if ret:
+                    src[i] = ret
+        else:
+            try:
+                if isinstance(src.ctx, Load) and src.id == n:
+                    return v
+            except:
+                try:
+                    for i in src.__dict__.keys():
+                        ret = nyanMigen._expand_const(getattr(src, i), n, v)
+                        if ret:
+                            setattr(src, i, v)
+                except Exception as e:
+                    pass
 
     def _get_ports(ctx):
         ret = nyanMigen._get_inputs(ctx)
