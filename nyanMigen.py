@@ -21,7 +21,7 @@ def nyanify(generics_file = None, print_ctx = False):
         init = nyanMigen.gen_init(ctx)
         e = nyanMigen.gen_exec(cls_src, ctx, generics_file)
         cls_src.body[0].body = [e, init, ports, inputs, outputs, elaborate]
-        imports = ast.parse("from nmigen import Elaboratable").body
+        imports = ast.parse("from nmigen import *\nfrom nmigen.cli import main").body
         imports.extend(cls_src.body)
         cls_src.body = imports
         print(" ->\n```python\n" + unparse(cls_src) + "\n```")
@@ -65,7 +65,6 @@ class nyanMigen:
     def fix(code):
         nyanMigen._add_module(code)
         (code.body, ctx) = nyanMigen._nyanify(code.body)
-        nyanMigen._add_elab_imports(code)
         nyanMigen._replace_ports_assigns(code.body, ctx)
         nyanMigen._add_return_module(code.body)
         nyanMigen._add_generics_to_elaborate(code, ctx)
@@ -87,9 +86,7 @@ class nyanMigen:
         for i in gnames:
             args_string += ", " + i
             generics.append(ast.parse("self." + i + " = " + i).body[0])
-        code = ast.parse("def __init__(self" + args_string + "):\n" +
-            "    from nmigen import Module, Signal, Array\n"
-        ).body[0]
+        code = ast.parse("def __init__(self" + args_string + "):\n    pass").body[0]
         body = generics
         for i in nyanMigen._get_ports(ctx):
             if nyanMigen._is_type(ctx, i, "Signal()"):
@@ -104,11 +101,6 @@ class nyanMigen:
             body.append(add)
         code.body.extend(body)
         return code
-
-    def _add_elab_imports(code):
-        add = ast.parse("from nmigen import Module, Signal, Array").body
-        add.extend(code.body)
-        code.body = add
 
     def gen_exec(cls, ctx, generics_file):
 
@@ -130,7 +122,6 @@ class nyanMigen:
             "def main():\n" +
             generics_str +
             "    top = " + cls.body[0].name + "(" + args_str + ")\n" +
-            "    from nmigen.cli import main\n" +
             "    main(top, name = \"" + cls.body[0].name + "\", ports = top.ports())"
         )
         code = ast.parse(str)
