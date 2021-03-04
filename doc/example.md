@@ -77,7 +77,7 @@ class ram(Elaboratable):
         rd_addr = self.rd_addr
         rd_data = self.rd_data
         mem = Array((Signal(dw) for i in range((2 ** aw))))
-        for i in range(n):
+        for i in range(0):
             if reg_wr:
                 wr_en_reg = Signal()
                 wr_addr_reg = Signal(aw)
