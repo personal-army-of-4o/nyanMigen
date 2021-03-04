@@ -1,2 +1,2 @@
-statistics:
-3. number of parsed lines by type
+1. implement a method that wraps a thing into a slicing subscript
+2. recursively parse slices
