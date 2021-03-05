@@ -1,6 +1,6 @@
 import ast
 import inspect
-from ast import Assign, AugAssign, Name, Load, Store, Call, If, Subscript, Num
+from ast import Assign, AugAssign, Name, Load, Store, Call, If, Subscript, Num, Attribute
 from pprintast import pprintast as ppa
 from astunparse import unparse
 
@@ -311,21 +311,18 @@ class nyanMigen:
                             return code
 
     @converter
-    def _convert_comb_assign(code, ctx):
+    def _convert_assign(code, ctx):
         slice = None
-        try:
-            (target, value) = i = nyanMigen._parse_comb_assign(code)
-        except:
-            (target, value, slice) = i = nyanMigen._parse_comb_assign_slice(code)
+        (domain, target, value, slice) = i = nyanMigen._parse_assign(code, None, [])
         module = nyanMigen._get_module(ctx)
         if not module:
             return
-        if nyanMigen._can_convert_comb_assign(i, ctx):
+        if nyanMigen._can_convert_assign(i, ctx):
             nyanMigen._parse_deps(value, ctx)
             if slice:
                 nyanMigen._parse_deps(slice, ctx)
-            nyanMigen._add_target(target, ctx)
-            return nyanMigen._dump_assign(module, None, target, value, slice)
+            nyanMigen._add_target(target, ctx, domain = domain)
+            return nyanMigen._dump_assign(module, domain, target, value, slice)
         else:
             raise Exception()
 
@@ -334,23 +331,6 @@ class nyanMigen:
             if nyanMigen._is_type(ctx, i, "Module()"):
                 return i
         return None
-
-    @converter
-    def _convert_sync_assign(code, ctx):
-        slice = None
-        try:
-            (domain, target, value) = i = nyanMigen._parse_sync_assign(code)
-        except:
-            (domain, target, value, slice) = i = nyanMigen._parse_sync_assign_slice(code)
-        module = nyanMigen._get_module(ctx)
-        if nyanMigen._can_convert_sync_assign(i, ctx):
-            nyanMigen._parse_deps(value, ctx)
-            if slice:
-                nyanMigen._parse_deps(slice, ctx)
-            nyanMigen._add_target(target, ctx, domain = domain)
-            return nyanMigen._dump_assign(module, domain, target, value, slice)
-        else:
-            raise Exception()
 
     @converter
     def _convert_if(code, ctx):
@@ -574,12 +554,7 @@ class nyanMigen:
             ret = [ret, elseast]
         return ret
 
-    def _can_convert_comb_assign(arg, ctx):
-        if (nyanMigen._is_signal(ctx, arg[0])):
-            return True
-        return False
-
-    def _can_convert_sync_assign(arg, ctx):
+    def _can_convert_assign(arg, ctx):
         if (nyanMigen._is_signal(ctx, arg[1])):
             return True
         return False
@@ -589,37 +564,18 @@ class nyanMigen:
             return nyanMigen._get_type(ctx, m) == t
         return False
 
-    def _parse_comb_assign(code):
+    def _parse_assign(code, value = None, s = []):
         if isinstance(code, Assign):
             if len(code.targets) == 1:
-                target = code.targets[0].id
-                value = code.value
-        return (target, value)
-
-    def _parse_comb_assign_slice(code):
-        if isinstance(code, Assign):
-            if len(code.targets) == 1:
-                target = code.targets[0].value.id
-                slice = code.targets[0].slice
-                value = code.value
-        return (target, value, slice)
-
-    def _parse_sync_assign(code):
-        if isinstance(code, Assign):
-            if len(code.targets) == 1:
-                domain = code.targets[0].value.id
-                target = code.targets[0].attr
-                value = code.value
-        return (domain, target, value)
-
-    def _parse_sync_assign_slice(code):
-        if isinstance(code, Assign):
-            if len(code.targets) == 1:
-                domain = code.targets[0].value.value.id
-                target = code.targets[0].value.attr
-                slice = code.targets[0].slice
-                value = code.value
-        return (domain, target, value, slice)
+                return nyanMigen._parse_assign(code.targets[0], code.value, [])
+            raise Exception()
+        elif isinstance(code, Subscript):
+            s.append(code.slice)
+            return nyanMigen._parse_assign(code.value, value, s)
+        elif isinstance(code, Name):
+            return (None, code.id, value, s)
+        elif isinstance(code, Attribute):
+            return (code.value.id, code.attr, value, s)
 
     def _dump_assign(m, d, t, v, s = None):
         if not d:
@@ -629,7 +585,7 @@ class nyanMigen:
         ret.value.args = [v]
         if s:
             if isinstance(s, list):
-                for i in range(len(s)):
+                for i in reversed(range(len(s))):
                     ret.value.func.value = nyanMigen._slice(ret.value.func.value, s[i])
             else:
                 ret.value.func.value = nyanMigen._slice(ret.value.func.value, s)
