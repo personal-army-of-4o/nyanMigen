@@ -1,6 +1,7 @@
 ```python
 class ram:
     def elaborate(self, platform):
+        n = 10
         wr_en = Signal()
         wr_addr = Signal(aw)
         wr_data = Signal(dw)
@@ -8,6 +9,10 @@ class ram:
         rd_data = Signal(dw//4)
 
         Memory(width = dw, depth = 2**aw, we = wr_en, wa = wr_addr, wd = wr_data, ra = rd_addr, rd = rd_data)
+        for i in range(n):
+            for j in range(n):
+                for k in range(n):
+                    sync.rd_data[i][j][k] = wr_data[i][j][k]
 
 ```
  ->
@@ -49,6 +54,7 @@ class ram(Elaboratable):
         aw = self.aw
         dw = self.dw
         m = Module()
+        n = 10
         wr_en = self.wr_en
         wr_addr = self.wr_addr
         wr_data = self.wr_data
@@ -58,6 +64,10 @@ class ram(Elaboratable):
         m.submodules.rdport0 = rdport0 = mem.read_port()
         m.submodules.wrport0 = wrport0 = mem.write_port()
         m.d.comb += [rdport0.addr.eq(rd_addr), rd_data.eq(rdport0.data), wrport0.addr.eq(wr_addr), wrport0.data.eq(wr_data), wrport0.en.eq(wr_en)]
+        for i in range(10):
+            for j in range(10):
+                for k in range(10):
+                    m.d.sync += rd_data[i][j][k].eq(wr_data[i][j][k])
         return m
 
 ```
