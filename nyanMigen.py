@@ -378,6 +378,11 @@ class nyanMigen:
 
     @converter
     def _memory_converter(code, ctx):
+        def parse_signal(code):
+            if isinstance(code, Attribute):
+                return (code.attr, code.value.id)
+            elif isinstance(code, Name):
+                return (code.id, "comb")
         if (
             code.value.func.id == "Memory" and
             isinstance(code.value.func.ctx, Load)
@@ -390,15 +395,15 @@ class nyanMigen:
                     nyanMigen._parse_deps(i.value, ctx)
                     d[i.arg] = unparse(i.value)[:-1]
                 if i.arg == "we" or i.arg == "wa" or i.arg == "wd" or i.arg == "ra" or i.arg == "rd":
-                    if i.value.id not in ctx:
+                    d[i.arg] = parse_signal(i.value)
+                    if d[i.arg][0] not in ctx:
+                        raise Exception("invalid memory connection")
+                    if d[i.arg][0] not in ctx:
                         raise Failure("mem generation failed: signal " + i.value.id + " is not known")
-                    if not (isinstance(i.value, Name) and isinstance(i.value.ctx, Load)):
-                        raise Failure("mem generation failed: argument " + i.value.id + " value should be a plain name")
-                    d[i.arg] = i.value.id
             # set driver and is_driven flags
             for i in ["we", "wa", "wd", "ra"]:
-                ctx[d[i]]["driver"] = True
-            ctx[d["rd"]]["is_driven"] = True
+                ctx[d[i][0]]["driver"] = True
+            ctx[d["rd"][0]]["is_driven"] = True
             # generate nMigen Memory instance
             try:
                 nyanMigen.mem_n += 1
@@ -410,18 +415,21 @@ class nyanMigen:
             initstr = ""
             if "init" in d:
                 initstr = ", init = " + d["init"]
-            s = (
-                "mem = Memory(width = " + d["width"] + ", depth = " + d["depth"] + initstr + ")\n" +
-                "m.submodules." + rdp + " = " + rdp + " = mem.read_port()\n" +
-                "m.submodules." + wrp + " = " + wrp + " = mem.write_port()\n" +
-                "m.d.comb += [\n" +
-                "    " + rdp + ".addr.eq(" + d["ra"] + "),\n" +
-                "    " + d["rd"] + ".eq(" + rdp + ".data),\n" +
-                "    " + wrp + ".addr.eq(" + d["wa"] + "),\n" +
-                "    " + wrp + ".data.eq(" + d["wd"] + "),\n" +
-                "    " + wrp + ".en.eq(" + d["we"] + "),\n" +
-                "]"
-            )
+            try:
+                s = (
+                    "mem = Memory(width = " + d["width"] + ", depth = " + d["depth"] + initstr + ")\n" +
+                    "m.submodules." + rdp + " = " + rdp + " = mem.read_port(domain = \"" + d["rd"][1] + "\")\n" +
+                    "m.submodules." + wrp + " = " + wrp + " = mem.write_port(domain = \"" + d["wd"][1] + "\")\n" +
+                    "m.d.comb += [\n" +
+                    "    " + rdp + ".addr.eq(" + d["ra"][0] + "),\n" +
+                    "    " + d["rd"][0] + ".eq(" + rdp + ".data),\n" +
+                    "    " + wrp + ".addr.eq(" + d["wa"][0] + "),\n" +
+                    "    " + wrp + ".data.eq(" + d["wd"][0] + "),\n" +
+                    "    " + wrp + ".en.eq(" + d["we"][0] + "),\n" +
+                    "]"
+                )
+            except Exception as e:
+                print(e)
             ret = ast.parse(s).body
             return ret
 
