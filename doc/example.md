@@ -8,7 +8,7 @@ class ram:
         rd_addr = Signal(aw+2)
         rd_data = Signal(dw//4)
 
-        Memory(width = dw, depth = 2**aw, we = wr_en, wa = wr_addr, wd = wr_data, ra = rd_addr, rd = rd_data)
+        Memory(width = dw, depth = 2**aw, we = wr_en, wa = wr_addr, wd = sync.wr_data, ra = rd_addr, rd = rd_data)
         for i in range(n):
             for j in range(n):
                 for k in range(n):
@@ -61,8 +61,8 @@ class ram(Elaboratable):
         rd_addr = self.rd_addr
         rd_data = self.rd_data
         mem = Memory(width=dw, depth=(2 ** aw))
-        m.submodules.rdport0 = rdport0 = mem.read_port()
-        m.submodules.wrport0 = wrport0 = mem.write_port()
+        m.submodules.rdport0 = rdport0 = mem.read_port(domain='comb')
+        m.submodules.wrport0 = wrport0 = mem.write_port(domain='sync')
         m.d.comb += [rdport0.addr.eq(rd_addr), rd_data.eq(rdport0.data), wrport0.addr.eq(wr_addr), wrport0.data.eq(wr_data), wrport0.en.eq(wr_en)]
         for i in range(10):
             for j in range(10):
