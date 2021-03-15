@@ -7,7 +7,6 @@ from astunparse import unparse
 
 def nyanify(generics_file = None, print_ctx = False):
     def foo(cls):
-        statistics = {}
         cls_str = inspect.getsource(cls)
         cls_str = nyanMigen.fix_case(cls_str)
         cls_src = ast.parse(cls_str)
