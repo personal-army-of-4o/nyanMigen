@@ -1,5 +1,6 @@
 from nyanMigen import nyanify
 
+
 @nyanify()
 class blink:
     def elaborate(self, platform):

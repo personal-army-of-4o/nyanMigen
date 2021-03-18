@@ -12,7 +12,6 @@ def nyanify(generics_file = None, print_ctx = False):
         cls_src = ast.parse(cls_str)
         classname = cls_src.body[0].name
         nyanMigen.add_heritage(cls_src)
-        print("```python\n" + cls_str + "\n```")
         code = nyanMigen.parse(cls_src, "elaborate")
         (elaborate, ctx) = nyanMigen.fix(code)
         ports = nyanMigen.gen_ports(ctx)
@@ -30,7 +29,7 @@ def nyanify(generics_file = None, print_ctx = False):
             for i in ctx:
                 print(i, ctx[i])
         nyanMigen.propagate_constants(cls_src, ctx)
-        print(" ->\n```python\n" + unparse(cls_src) + "\n```")
+        print(unparse(cls_src))
         return nyanMigen.compile(cls_src, classname)
     return foo
 
