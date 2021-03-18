@@ -30,7 +30,10 @@ def nyanify(generics_file = None, print_ctx = False):
                 print(i, ctx[i])
         nyanMigen.propagate_constants(cls_src, ctx)
         print(unparse(cls_src))
-        return nyanMigen.compile(cls_src, classname)
+        ret = nyanMigen.compile(cls_src, classname)
+        ret.main()
+        return ret
+
     return foo
 
 class nyanStatistics:
@@ -170,8 +173,7 @@ class nyanMigen:
             generics_str = (
                 "    import json\n" +
                 "    with open('" + generics_file + "', 'r') as read_file:\n" +
-                "        generics = json.load(read_file)\n" +
-                "    print(generics)\n"
+                "        generics = json.load(read_file)\n"
             )
             args_str = ', '.join(map(add_generics2str, generics))
         str = (

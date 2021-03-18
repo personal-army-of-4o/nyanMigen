@@ -1,3 +1,12 @@
+failed to convert line
+Assign(targets=[
+    Name(id='index', ctx=Store()),
+  ], value=BinOp(left=BinOp(left=BinOp(left=Name(id='i', ctx=Load()), op=Mult(), right=BinOp(left=Name(id='n', ctx=Load()), op=Pow(), right=Num(n=2))), op=Add(), right=BinOp(left=Name(id='j', ctx=Load()), op=Mult(), right=Name(id='n', ctx=Load()))), op=Add(), right=Name(id='k', ctx=Load())))
+failed to convert line
+Assign(targets=[
+    Name(id='v', ctx=Store()),
+  ], value=Subscript(value=Name(id='inp', ctx=Load()), slice=Index(value=Name(id='index', ctx=Load())), ctx=Load()))
+
 from nmigen import *
 from nmigen.cli import main
 
@@ -32,7 +41,6 @@ class indexing(Elaboratable):
                 for k in range(3):
                     index = (((i * (3 ** 2)) + (j * 3)) + k)
                     v = inp[index]
-                    print(v)
                     m.d.comb += ari[i][j][k].eq(v)
         for i in range(3):
             for j in range(3):
