@@ -1,0 +1,32 @@
+
+from nmigen import *
+from nmigen.cli import main
+
+class python_const(Elaboratable):
+
+    def main():
+        top = python_const()
+        main(top, name='python_const', ports=top.ports())
+
+    def __init__(self):
+        pass
+        self.o = Signal(32)
+
+    def ports(self):
+        return [self.o]
+
+    def inputs(self):
+        return []
+
+    def outputs(self):
+        return [self.o]
+
+    def elaborate(self, platform):
+        m = Module()
+        o = self.o
+        val = 12345
+        m.d.comb += o.eq(12345)
+        return m
+
+if __name__ == '__main__':
+    python_const.main()

@@ -1,0 +1,45 @@
+from nmigen import *
+from nmigen.cli import main
+
+class indexing(Elaboratable):
+
+    def main():
+        top = indexing()
+        main(top, name='indexing', ports=top.ports())
+
+    def __init__(self):
+        pass
+        self.outp = Signal((3 ** 3))
+
+    def ports(self):
+        return [self.outp]
+
+    def inputs(self):
+        return []
+
+    def outputs(self):
+        return [self.outp]
+
+    def elaborate(self, platform):
+        m = Module()
+        n = 3
+        inp = Signal((3 ** 3))
+        outp = self.outp
+        ari = Array((Array((Signal for _ in range(3))) for _ in range(3)))
+        aro = Array((Array((Signal for _ in range(3))) for _ in range(3)))
+        for i in range(3):
+            for j in range(3):
+                for k in range(3):
+                    index = (((i * (3 ** 2)) + (j * 3)) + k)
+                    v = inp[index]
+                    print(v)
+                    m.d.comb += ari[i][j][k].eq(v)
+        for i in range(3):
+            for j in range(3):
+                for k in range(3):
+                    m.d.sync += aro[i][j][k].eq(ari[j][k][i])
+        m.d.comb += outp.eq(Cat(Cat(aro)))
+        return m
+
+if __name__ == '__main__':
+    indexing.main()
