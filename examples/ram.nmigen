@@ -8,7 +8,6 @@ class ram(Elaboratable):
         import json
         with open('config.json', 'r') as read_file:
             generics = json.load(read_file)
-        print(generics)
         top = ram(generics['aw'], generics['dw'])
         main(top, name='ram', ports=top.ports())
 
@@ -46,6 +45,5 @@ class ram(Elaboratable):
         m.d.comb += [rdport0.addr.eq(rd_addr), rd_data.eq(rdport0.data), wrport0.addr.eq(wr_addr), wrport0.data.eq(wr_data), wrport0.en.eq(wr_en)]
         return m
 
-{'dw': 8, 'aw': 10, 'reg_wr': False}
 if __name__ == '__main__':
     ram.main()

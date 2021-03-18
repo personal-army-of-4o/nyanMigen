@@ -31,7 +31,9 @@ class indexing(Elaboratable):
         for i in range(3):
             for j in range(3):
                 for k in range(3):
-                    m.d.comb += ari[i][j][k].eq(inp[(((i * (n ** 2)) + (j * n)) + k)])
+                    index = (((i * (3 ** 2)) + (j * 3)) + k)
+                    v = inp[index]
+                    m.d.comb += ari[i][j][k].eq(v)
         for i in range(3):
             for j in range(3):
                 for k in range(3):

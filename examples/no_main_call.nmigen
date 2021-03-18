@@ -1,0 +1,33 @@
+
+from nmigen import *
+from nmigen.cli import main
+
+class no_main_call(Elaboratable):
+
+    def main():
+        top = no_main_call()
+        main(top, name='no_main_call', ports=top.ports())
+
+    def __init__(self):
+        pass
+        self.a = Signal()
+        self.b = Signal()
+
+    def ports(self):
+        return [self.a, self.b]
+
+    def inputs(self):
+        return [self.a]
+
+    def outputs(self):
+        return [self.b]
+
+    def elaborate(self, platform):
+        m = Module()
+        a = self.a
+        b = self.b
+        m.d.comb += b.eq(a)
+        return m
+
+if __name__ == '__main__':
+    no_main_call.main()
