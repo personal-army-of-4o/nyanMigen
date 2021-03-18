@@ -275,13 +275,19 @@ class nyanMigen:
         if isinstance(code, Assign):
             if (
                 code.value.func.id == "Signal" and
-                isinstance(code.value.func.ctx, Load) and
-                len(code.value.keywords) == 0
+                isinstance(code.value.func.ctx, Load)
             ):
+                fp = False
+                if len(code.value.keywords) > 0:
+                    kw = code.value.keywords
+                    for i in range(len(kw)):
+                        if kw[i].arg == "port" and kw[i].value.value == True:
+                            fp = True
                 for i in code.targets:
                     if isinstance(i, Name):
                         if isinstance(i.ctx, Store):
                             nyanMigen._set_type(ctx, i.id, "Signal()", code.value.args)
+                            ctx[i.id]["forced_port"] = fp
                             nyanMigen._parse_deps(code.value.args, ctx)
                             return code
             elif (
@@ -293,6 +299,7 @@ class nyanMigen:
                     if isinstance(i, Name):
                         if isinstance(i.ctx, Store):
                             nyanMigen._set_type(ctx, i.id, "Array()", code.value.args)
+                            ctx[i.id]["forced_port"] = False
                             return code
 
     @converter
@@ -519,7 +526,7 @@ class nyanMigen:
         ret = []
         for i in ctx:
             if nyanMigen._is_signal(ctx, i):
-                if ctx[i]["driver"] == False:
+                if ctx[i]["driver"] == False or ctx[i]["forced_port"]:
                     if ctx[i]["is_driven"]:
                         ret.append(i)
         return ret
