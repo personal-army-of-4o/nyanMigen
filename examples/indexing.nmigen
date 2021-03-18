@@ -1,11 +1,3 @@
-failed to convert line
-Assign(targets=[
-    Name(id='index', ctx=Store()),
-  ], value=BinOp(left=BinOp(left=BinOp(left=Name(id='i', ctx=Load()), op=Mult(), right=BinOp(left=Name(id='n', ctx=Load()), op=Pow(), right=Num(n=2))), op=Add(), right=BinOp(left=Name(id='j', ctx=Load()), op=Mult(), right=Name(id='n', ctx=Load()))), op=Add(), right=Name(id='k', ctx=Load())))
-failed to convert line
-Assign(targets=[
-    Name(id='v', ctx=Store()),
-  ], value=Subscript(value=Name(id='inp', ctx=Load()), slice=Index(value=Name(id='index', ctx=Load())), ctx=Load()))
 
 from nmigen import *
 from nmigen.cli import main
@@ -18,21 +10,21 @@ class indexing(Elaboratable):
 
     def __init__(self):
         pass
+        self.inp = Signal((3 ** 3))
         self.outp = Signal((3 ** 3))
 
     def ports(self):
-        return [self.outp]
+        return [self.inp, self.outp]
 
     def inputs(self):
-        return []
+        return [self.inp]
 
     def outputs(self):
         return [self.outp]
 
     def elaborate(self, platform):
         m = Module()
-        n = 3
-        inp = Signal((3 ** 3))
+        inp = self.inp
         outp = self.outp
         ari = Array((Array((Signal for _ in range(3))) for _ in range(3)))
         aro = Array((Array((Signal for _ in range(3))) for _ in range(3)))

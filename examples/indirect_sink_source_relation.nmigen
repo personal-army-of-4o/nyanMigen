@@ -1,0 +1,37 @@
+failed to convert line
+Assign(targets=[
+    Name(id='v', ctx=Store()),
+  ], value=Name(id='a', ctx=Load()))
+
+from nmigen import *
+from nmigen.cli import main
+
+class indirect_sink_source_relation(Elaboratable):
+
+    def main():
+        top = indirect_sink_source_relation()
+        main(top, name='indirect_sink_source_relation', ports=top.ports())
+
+    def __init__(self):
+        pass
+        self.b = Signal()
+
+    def ports(self):
+        return [self.b]
+
+    def inputs(self):
+        return []
+
+    def outputs(self):
+        return [self.b]
+
+    def elaborate(self, platform):
+        m = Module()
+        a = Signal()
+        b = self.b
+        v = a
+        m.d.comb += b.eq(v)
+        return m
+
+if __name__ == '__main__':
+    indirect_sink_source_relation.main()

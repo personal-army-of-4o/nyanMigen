@@ -24,7 +24,6 @@ class python_const(Elaboratable):
     def elaborate(self, platform):
         m = Module()
         o = self.o
-        val = 12345
         m.d.comb += o.eq(12345)
         return m
 
