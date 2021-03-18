@@ -251,7 +251,7 @@ class nyanMigen:
                     pass
                 try:
                     ii = f(i, ctx)
-                    if ii:
+                    if ii != None:
                         i = ii
                         converted = True
                         break
@@ -357,16 +357,33 @@ class nyanMigen:
 
     @converter
     def _convert_simple_assignment(code, ctx):
-        if(
-            isinstance(code, Assign) and
-            len(code.targets) == 1 and
-            isinstance(code.targets[0], Name) and
-            isinstance(code.targets[0].ctx, Store) and
-            isinstance(code.value, Num)
-        ):
-            nyanMigen._set_type(ctx, code.targets[0].id, "py_const")
-            ctx[code.targets[0].id]["args"] = code.value
-            return code
+        if False:
+            if(
+                isinstance(code, Assign) and
+                len(code.targets) == 1 and
+                isinstance(code.targets[0], Name) and
+                isinstance(code.targets[0].ctx, Store) and
+                isinstance(code.value, Num)
+            ):
+                nyanMigen._set_type(ctx, code.targets[0].id, "py_const")
+                ctx[code.targets[0].id]["args"] = code.value
+                return code
+        else:
+            if(
+                isinstance(code, Assign) and
+                len(code.targets) == 1 and
+                isinstance(code.targets[0], Name) and
+                isinstance(code.targets[0].ctx, Store)
+            ):
+                deps = nyanMigen._parse_deps(code.value)
+                check = True
+                for i in deps:
+                    if nyanMigen._is_signal(ctx, i):
+                        check = False
+                if check:
+                    nyanMigen._set_type(ctx, code.targets[0].id, "py_const")
+                    ctx[code.targets[0].id]["args"] = code.value
+                    return []
 
     @converter
     def _convert_generic_with(code, ctx):
@@ -440,7 +457,7 @@ class nyanMigen:
                         print("warning: redefining signal", target, "domain")
                 ctx[target]["domain"] = domain
 
-    def _parse_deps(value, ctx, is_func = False):
+    def _parse_deps(value, ctx = {}, is_func = False):
         ret = []
         if isinstance(value, list):
             for i in value:
