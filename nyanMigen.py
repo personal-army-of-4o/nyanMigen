@@ -1,15 +1,13 @@
 import ast
 import inspect
-from ast import Assign, AugAssign, Name, Load, Store, Call, If, Subscript, Num, Attribute
+from ast import Assign, AugAssign, Name, Load, Store, Call, If, Subscript, Num, Attribute, IfExp
 from pprintast import pprintast as ppa
 from astunparse import unparse
 
 
 def nyanify(generics_file = None, print_ctx = False):
     def foo(cls):
-        cls_str = inspect.getsource(cls)
-        cls_str = nyanMigen.fix_case(cls_str)
-        cls_src = ast.parse(cls_str)
+        cls_src = classify(cls)
         classname = cls_src.body[0].name
         nyanMigen.add_heritage(cls_src)
         code = nyanMigen.parse(cls_src, "elaborate")
@@ -35,6 +33,27 @@ def nyanify(generics_file = None, print_ctx = False):
         return ret
 
     return foo
+
+def classify(cls):
+    if inspect.isclass(cls):
+        cls_str = inspect.getsource(cls)
+        cls_str = nyanMigen.fix_case(cls_str)
+        cls_src = ast.parse(cls_str)
+        return cls_src
+    elif inspect.isfunction(cls):
+        name = cls.__name__
+        cls_str = "class " + name + ":\n    def elaborate(self, platform):\n        pass"
+        ret = ast.parse(cls_str)
+
+        cls = ast.parse(inspect.getsource(cls)).body[0]
+        cls.name = 'elaborate'
+        cls.args = ast.parse("def foo(self, platform):\n    pass").body[0].args
+        cls.decorator_list = []
+
+        ret.body[0].body[0] = cls
+        return ret
+    else:
+        raise Excaption("nyanify can only accept class or function")
 
 class nyanStatistics:
     def __init__(self, cls, cls_fixed, ctx, classname):
@@ -238,6 +257,8 @@ class nyanMigen:
     def _nyanify(code, ctx = None):
         if not ctx:
             ctx = {}
+        if not isinstance(code, list):
+            code = [code]
         ret = []
         for i in code:
             converted = False
@@ -321,6 +342,8 @@ class nyanMigen:
     def _convert_assign(code, ctx):
         slice = None
         (domain, target, value, slice) = i = nyanMigen._parse_assign(code, None, [])
+        if isinstance(code.value, IfExp):
+            return nyanMigen._convert_IfExp(code, ctx)
         module = nyanMigen._get_module(ctx)
         if not module:
             return
@@ -338,6 +361,20 @@ class nyanMigen:
                 return nyanMigen._dump_assign(module, domain, target, value, slice)
         else:
             raise Exception()
+
+    def _convert_IfExp(code, ctx):
+        src = ast.parse("if a:\n    b()\nelse:\n    c()").body[0]
+        src.test = code.value.test
+        t0 = ast.parse("a = 0").body[0]
+        t1 = ast.parse("a = 0").body[0]
+        t0.targets = code.targets
+        t0.value = code.value.body
+        t1.targets = code.targets
+        t1.value = code.value.orelse
+        src.body = [t0]
+        src.orelse = [t1]
+        (ret, _) = nyanMigen._nyanify(src, ctx)
+        return ret
 
     def _get_module(ctx):
         for i in list(ctx.keys()):
@@ -372,33 +409,16 @@ class nyanMigen:
 
     @converter
     def _convert_simple_assignment(code, ctx):
-        if False:
-            if(
-                isinstance(code, Assign) and
-                len(code.targets) == 1 and
-                isinstance(code.targets[0], Name) and
-                isinstance(code.targets[0].ctx, Store) and
-                isinstance(code.value, Num)
-            ):
-                nyanMigen._set_type(ctx, code.targets[0].id, "py_const")
-                ctx[code.targets[0].id]["args"] = code.value
-                return code
-        else:
-            if(
-                isinstance(code, Assign) and
-                len(code.targets) == 1 and
-                isinstance(code.targets[0], Name) and
-                isinstance(code.targets[0].ctx, Store)
-            ):
-                deps = nyanMigen._parse_deps(code.value)
-                check = True
-                for i in deps:
-                    if nyanMigen._is_signal(ctx, i):
-                        check = False
-                if check:
-                    nyanMigen._set_type(ctx, code.targets[0].id, "py_const")
-                    ctx[code.targets[0].id]["args"] = code.value
-                    return []
+        if(
+            isinstance(code, Assign) and
+            len(code.targets) == 1 and
+            isinstance(code.targets[0], Name) and
+            isinstance(code.targets[0].ctx, Store)
+        ):
+            deps = nyanMigen._parse_deps(code.value, ctx)
+            nyanMigen._set_type(ctx, code.targets[0].id, "py_const")
+            ctx[code.targets[0].id]["args"] = code.value
+            return []
 
     @converter
     def _convert_generic_with(code, ctx):
