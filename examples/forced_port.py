@@ -10,6 +10,3 @@ class forced_port:
 
         b = a
         c = b
-
-if __name__ == '__main__':
-    forced_port.main()

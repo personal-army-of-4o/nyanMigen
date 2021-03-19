@@ -22,6 +22,3 @@ class indexing:
                     sync.aro[i][j][k] = ari[j][k][i]
 
         outp = Cat(Cat(aro))
-
-if (__name__ == '__main__'):
-    indexing.main()
