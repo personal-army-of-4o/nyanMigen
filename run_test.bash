@@ -10,8 +10,12 @@ echo $src
 
 for i in $src; do
     n="${i%.*}"
-    e="python3 $i generate $n.v -s"
     o=$n.nmigen
+    v=$n.v
+
+    rm $o $v
+
+    e="python3 $i generate $v -s"
     echo $e "> $o"
     $e > $o
     echo "if __name__ == '__main__':" >> $o
