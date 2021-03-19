@@ -366,33 +366,16 @@ class nyanMigen:
 
     @converter
     def _convert_simple_assignment(code, ctx):
-        if False:
-            if(
-                isinstance(code, Assign) and
-                len(code.targets) == 1 and
-                isinstance(code.targets[0], Name) and
-                isinstance(code.targets[0].ctx, Store) and
-                isinstance(code.value, Num)
-            ):
-                nyanMigen._set_type(ctx, code.targets[0].id, "py_const")
-                ctx[code.targets[0].id]["args"] = code.value
-                return code
-        else:
-            if(
-                isinstance(code, Assign) and
-                len(code.targets) == 1 and
-                isinstance(code.targets[0], Name) and
-                isinstance(code.targets[0].ctx, Store)
-            ):
-                deps = nyanMigen._parse_deps(code.value)
-                check = True
-                for i in deps:
-                    if nyanMigen._is_signal(ctx, i):
-                        check = False
-                if check:
-                    nyanMigen._set_type(ctx, code.targets[0].id, "py_const")
-                    ctx[code.targets[0].id]["args"] = code.value
-                    return []
+        if(
+            isinstance(code, Assign) and
+            len(code.targets) == 1 and
+            isinstance(code.targets[0], Name) and
+            isinstance(code.targets[0].ctx, Store)
+        ):
+            deps = nyanMigen._parse_deps(code.value, ctx)
+            nyanMigen._set_type(ctx, code.targets[0].id, "py_const")
+            ctx[code.targets[0].id]["args"] = code.value
+            return []
 
     @converter
     def _convert_generic_with(code, ctx):
