@@ -7,6 +7,3 @@ class python_const:
         o = Signal(32)
         val= 12345
         o = val
-
-if __name__ == '__main__':
-    python_const.main()
