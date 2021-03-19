@@ -3,5 +3,7 @@
 module indirect_sink_source_relation(b, a);
   input a;
   output b;
-  assign b = a;
+  wire v;
+  assign b = v;
+  assign v = a;
 endmodule

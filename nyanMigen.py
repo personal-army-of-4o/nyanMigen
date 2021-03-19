@@ -358,12 +358,18 @@ class nyanMigen:
         module = nyanMigen._get_module(ctx)
         if not module:
             return
+        add = False
+        if not nyanMigen._has_type(ctx, target):
+            add = nyanMigen._try_to_inherite_type(i,  ctx)
         if nyanMigen._can_convert_assign(i, ctx):
             nyanMigen._parse_deps(value, ctx)
             if slice:
                 nyanMigen._parse_deps(slice, ctx)
             nyanMigen._add_target(target, ctx, domain = domain)
-            return nyanMigen._dump_assign(module, domain, target, value, slice)
+            if add:
+                return [add, nyanMigen._dump_assign(module, domain, target, value, slice)]
+            else:
+                return nyanMigen._dump_assign(module, domain, target, value, slice)
         else:
             raise Exception()
 
@@ -598,6 +604,10 @@ class nyanMigen:
             if "type" in ctx[n]:
                 return ctx[n]["type"]
 
+    def _has_type(ctx, n):
+        if n in ctx:
+            return "type" in ctx[n]
+
     def _is_signal(ctx, v):
         if isinstance(v, list):
             for i in v:
@@ -618,9 +628,32 @@ class nyanMigen:
         return ret
 
     def _can_convert_assign(arg, ctx):
-        if (nyanMigen._is_signal(ctx, arg[1])):
+        s = arg[1]
+        if (nyanMigen._is_signal(ctx, s)):
             return True
         return False
+
+    def _try_to_inherite_type(arg, ctx):
+        v = arg[2]
+        if isinstance(v, Name) and isinstance(v.ctx, Load) and nyanMigen._is_signal(ctx, v.id):
+            s = arg[1]
+            ctx[s]["initialized"] = ctx[v.id]["initialized"]
+            ctx[s]["forced_port"] = ctx[v.id]["forced_port"]
+            nyanMigen._set_type(ctx, s, ctx[v.id]['type'], ctx[v.id]['args'])
+
+            # TODO: merge with gen init code
+            i = s
+            if nyanMigen._is_type(ctx, i, "Signal()"):
+                add = ast.parse("a = Signal()").body[0]
+            elif nyanMigen._is_type(ctx, i, "Array()"):
+                add = ast.parse("a = Array()").body[0]
+            else:
+                raise Failure("unknown signal type for signal " + i)
+            add.targets[0].id = i
+            if ctx[i]["args"]:
+                add.value.args = ctx[i]["args"]
+            return add
+        raise Exception("couldn't inherit" + str(s) + "from" + str(v.id))
 
     def _is_type(ctx, m, t):
         if m in ctx:
