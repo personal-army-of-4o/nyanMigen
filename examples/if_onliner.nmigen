@@ -1,0 +1,36 @@
+
+from nmigen import *
+from nmigen.cli import main
+
+class if_oneliner(Elaboratable):
+
+    def main():
+        top = if_oneliner()
+        main(top, name='if_oneliner', ports=top.ports())
+
+    def __init__(self):
+        pass
+        self.b = Signal()
+        self.a = Signal()
+
+    def ports(self):
+        return [self.b, self.a]
+
+    def inputs(self):
+        return [self.b]
+
+    def outputs(self):
+        return [self.a]
+
+    def elaborate(self, platform):
+        m = Module()
+        a = self.a
+        b = self.b
+        with m.If(b):
+            m.d.comb += a.eq(1)
+        with m.Else():
+            m.d.comb += a.eq(0)
+        return m
+
+if __name__ == '__main__':
+    if_onliner.main()
