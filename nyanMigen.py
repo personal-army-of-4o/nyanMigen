@@ -7,9 +7,7 @@ from astunparse import unparse
 
 def nyanify(generics_file = None, print_ctx = False):
     def foo(cls):
-        cls_str = inspect.getsource(cls)
-        cls_str = nyanMigen.fix_case(cls_str)
-        cls_src = ast.parse(cls_str)
+        cls_src = classify(cls)
         classname = cls_src.body[0].name
         nyanMigen.add_heritage(cls_src)
         code = nyanMigen.parse(cls_src, "elaborate")
@@ -35,6 +33,27 @@ def nyanify(generics_file = None, print_ctx = False):
         return ret
 
     return foo
+
+def classify(cls):
+    if inspect.isclass(cls):
+        cls_str = inspect.getsource(cls)
+        cls_str = nyanMigen.fix_case(cls_str)
+        cls_src = ast.parse(cls_str)
+        return cls_src
+    elif inspect.isfunction(cls):
+        name = cls.__name__
+        cls_str = "class " + name + ":\n    def elaborate(self, platform):\n        pass"
+        ret = ast.parse(cls_str)
+
+        cls = ast.parse(inspect.getsource(cls)).body[0]
+        cls.name = 'elaborate'
+        cls.args = ast.parse("def foo(self, platform):\n    pass").body[0].args
+        cls.decorator_list = []
+
+        ret.body[0].body[0] = cls
+        return ret
+    else:
+        raise Excaption("nyanify can only accept class or function")
 
 class nyanStatistics:
     def __init__(self, cls, cls_fixed, ctx, classname):
