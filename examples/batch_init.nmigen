@@ -1,0 +1,33 @@
+
+from nmigen import *
+from nmigen.cli import main
+
+class batch_init(Elaboratable):
+
+    def main():
+        top = batch_init()
+        main(top, name='batch_init', ports=top.ports())
+
+    def __init__(self):
+        pass
+        self.b = Signal()
+        self.a = Signal()
+
+    def ports(self):
+        return [self.b, self.a]
+
+    def inputs(self):
+        return [self.b]
+
+    def outputs(self):
+        return [self.a]
+
+    def elaborate(self, platform):
+        m = Module()
+        a = self.a
+        b = self.b
+        m.d.comb += a.eq(b)
+        return m
+
+if __name__ == '__main__':
+    batch_init.main()

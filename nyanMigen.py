@@ -273,6 +273,7 @@ class nyanMigen:
     @converter
     def _parse_signal(code, ctx):
         if isinstance(code, Assign):
+            ret = []
             if (
                 code.value.func.id == "Signal" and
                 isinstance(code.value.func.ctx, Load)
@@ -289,7 +290,12 @@ class nyanMigen:
                             nyanMigen._set_type(ctx, i.id, "Signal()", code.value.args)
                             ctx[i.id]["forced_port"] = fp
                             nyanMigen._parse_deps(code.value.args, ctx)
-                            return code
+
+                            add = ast.parse("a = b").body[0]
+                            add.value = code.value
+                            add.targets = [i]
+                            ret.append(add)
+                return ret
             elif (
                 code.value.func.id == "Array" and
                 isinstance(code.value.func.ctx, Load) and
@@ -300,7 +306,12 @@ class nyanMigen:
                         if isinstance(i.ctx, Store):
                             nyanMigen._set_type(ctx, i.id, "Array()", code.value.args)
                             ctx[i.id]["forced_port"] = False
-                            return code
+
+                            add = ast.parse("a = b").body[0]
+                            add.value = code.value
+                            add.targets = [i]
+                            ret.append(add)
+                return ret
 
     @converter
     def _parse_module(code, ctx):
