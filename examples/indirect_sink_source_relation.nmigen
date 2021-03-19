@@ -1,7 +1,3 @@
-failed to convert line
-Assign(targets=[
-    Name(id='v', ctx=Store()),
-  ], value=Name(id='a', ctx=Load()))
 
 from nmigen import *
 from nmigen.cli import main
@@ -14,22 +10,24 @@ class indirect_sink_source_relation(Elaboratable):
 
     def __init__(self):
         pass
+        self.a = Signal()
         self.b = Signal()
 
     def ports(self):
-        return [self.b]
+        return [self.a, self.b]
 
     def inputs(self):
-        return []
+        return [self.a]
 
     def outputs(self):
         return [self.b]
 
     def elaborate(self, platform):
         m = Module()
-        a = Signal()
+        a = self.a
         b = self.b
-        v = a
+        v = Signal()
+        m.d.comb += v.eq(a)
         m.d.comb += b.eq(v)
         return m
 

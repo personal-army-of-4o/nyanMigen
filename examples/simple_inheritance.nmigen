@@ -1,0 +1,38 @@
+
+from nmigen import *
+from nmigen.cli import main
+
+class simple_inheritance(Elaboratable):
+
+    def main():
+        top = simple_inheritance()
+        main(top, name='simple_inheritance', ports=top.ports())
+
+    def __init__(self):
+        pass
+        self.ins = Signal()
+        self.inv = Signal(32)
+        self.outs = Signal()
+        self.outv = Signal(32)
+
+    def ports(self):
+        return [self.ins, self.inv, self.outs, self.outv]
+
+    def inputs(self):
+        return [self.ins, self.inv]
+
+    def outputs(self):
+        return [self.outs, self.outv]
+
+    def elaborate(self, platform):
+        m = Module()
+        ins = self.ins
+        inv = self.inv
+        outs = self.outs
+        m.d.comb += outs.eq(ins)
+        outv = self.outv
+        m.d.comb += outv.eq(inv)
+        return m
+
+if __name__ == '__main__':
+    simple_inheritance.main()
