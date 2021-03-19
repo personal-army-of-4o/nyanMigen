@@ -1,6 +1,6 @@
 import ast
 import inspect
-from ast import Assign, AugAssign, Name, Load, Store, Call, If, Subscript, Num, Attribute
+from ast import Assign, AugAssign, Name, Load, Store, Call, If, Subscript, Num, Attribute, IfExp
 from pprintast import pprintast as ppa
 from astunparse import unparse
 
@@ -257,6 +257,8 @@ class nyanMigen:
     def _nyanify(code, ctx = None):
         if not ctx:
             ctx = {}
+        if not isinstance(code, list):
+            code = [code]
         ret = []
         for i in code:
             converted = False
@@ -340,6 +342,8 @@ class nyanMigen:
     def _convert_assign(code, ctx):
         slice = None
         (domain, target, value, slice) = i = nyanMigen._parse_assign(code, None, [])
+        if isinstance(code.value, IfExp):
+            return nyanMigen._convert_IfExp(code, ctx)
         module = nyanMigen._get_module(ctx)
         if not module:
             return
@@ -351,6 +355,20 @@ class nyanMigen:
             return nyanMigen._dump_assign(module, domain, target, value, slice)
         else:
             raise Exception()
+
+    def _convert_IfExp(code, ctx):
+        src = ast.parse("if a:\n    b()\nelse:\n    c()").body[0]
+        src.test = code.value.test
+        t0 = ast.parse("a = 0").body[0]
+        t1 = ast.parse("a = 0").body[0]
+        t0.targets = code.targets
+        t0.value = code.value.body
+        t1.targets = code.targets
+        t1.value = code.value.orelse
+        src.body = [t0]
+        src.orelse = [t1]
+        (ret, _) = nyanMigen._nyanify(src, ctx)
+        return ret
 
     def _get_module(ctx):
         for i in list(ctx.keys()):
