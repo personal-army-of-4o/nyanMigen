@@ -2,11 +2,11 @@
 from nmigen import *
 from nmigen.cli import main
 
-class blink(Elaboratable):
+class inherit_width_from_slicing(Elaboratable):
 
     def main():
-        top = blink()
-        main(top, name='blink', ports=top.ports())
+        top = inherit_width_from_slicing()
+        main(top, name='inherit_width_from_slicing', ports=top.ports())
 
     def __init__(self):
         pass
@@ -30,4 +30,4 @@ class blink(Elaboratable):
         return m
 
 if __name__ == '__main__':
-    blink.main()
+    inherit_width_from_slicing.main()

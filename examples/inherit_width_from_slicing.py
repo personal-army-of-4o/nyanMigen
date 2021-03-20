@@ -2,7 +2,7 @@ from nyanMigen import nyanify
 
 
 @nyanify()
-def blink():
+def inherit_width_from_slicing():
     cnt = Signal(24)
 
     sync.cnt = cnt+1
