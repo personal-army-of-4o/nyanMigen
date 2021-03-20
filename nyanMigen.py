@@ -53,7 +53,7 @@ def classify(cls):
         ret.body[0].body[0] = cls
         return ret
     else:
-        raise Excaption("nyanify can only accept class or function")
+        raise Exception("nyanify can only accept class or function")
 
 class nyanStatistics:
     def __init__(self, cls, cls_fixed, ctx, classname):
