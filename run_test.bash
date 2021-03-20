@@ -2,7 +2,6 @@
 
 
 exs="examples/"
-cp *.json $exs
 cd $exs
 src=`ls | grep .py$`
 
