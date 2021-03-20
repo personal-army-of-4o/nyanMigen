@@ -1,4 +1,4 @@
-to test: `python3 test.py`
+to test: `run_test.bash`
 
 to install: `pip3 install .`
 
