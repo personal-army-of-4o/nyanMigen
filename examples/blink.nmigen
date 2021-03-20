@@ -24,8 +24,8 @@ class blink(Elaboratable):
     def elaborate(self, platform):
         m = Module()
         cnt = Signal(24)
-        led = self.led
         m.d.sync += cnt.eq((cnt + 1))
+        led = self.led
         m.d.comb += led.eq(cnt[23])
         return m
 

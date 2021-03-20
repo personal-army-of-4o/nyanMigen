@@ -635,25 +635,46 @@ class nyanMigen:
 
     def _try_to_inherite_type(arg, ctx):
         v = arg[2]
-        if isinstance(v, Name) and isinstance(v.ctx, Load) and nyanMigen._is_signal(ctx, v.id):
-            s = arg[1]
-            ctx[s]["initialized"] = ctx[v.id]["initialized"]
-            ctx[s]["forced_port"] = ctx[v.id]["forced_port"]
-            nyanMigen._set_type(ctx, s, ctx[v.id]['type'], ctx[v.id]['args'])
+        s = arg[1]
+        slice = arg[3]
+        is_assign = False
+        is_slice = False
+        try:
+            n = v.id
+            is_assign = True
+            t = ctx[n]['type']
+            args = ctx[n]['args']
+        except:
+            try:
+                n = v.value.id
+                is_slice = True
+                t = ctx[n]['type']
+                if t == 'Signal()':
+                    t = 'Signal()'
+                    args = []
+                else:
+                    print("send me this code")
+                    exit(1)
+            except:
+                print("couldn't inherit" + str(s) + "from" + str(v.id))
+                exit(1)
 
-            # TODO: merge with gen init code
-            i = s
-            if nyanMigen._is_type(ctx, i, "Signal()"):
-                add = ast.parse("a = Signal()").body[0]
-            elif nyanMigen._is_type(ctx, i, "Array()"):
-                add = ast.parse("a = Array()").body[0]
-            else:
-                raise Failure("unknown signal type for signal " + i)
-            add.targets[0].id = i
-            if ctx[i]["args"]:
-                add.value.args = ctx[i]["args"]
-            return add
-        raise Exception("couldn't inherit" + str(s) + "from" + str(v.id))
+        ctx[s]["initialized"] = ctx[n]["initialized"]
+        ctx[s]["forced_port"] = ctx[n]["forced_port"]
+        nyanMigen._set_type(ctx, s, t, args)
+
+        # TODO: merge with gen init code
+        i = s
+        if nyanMigen._is_type(ctx, i, "Signal()"):
+            add = ast.parse("a = Signal()").body[0]
+        elif nyanMigen._is_type(ctx, i, "Array()"):
+            add = ast.parse("a = Array()").body[0]
+        else:
+            raise Failure("unknown signal type for signal " + i)
+        add.targets[0].id = i
+        if ctx[i]["args"]:
+            add.value.args = ctx[i]["args"]
+        return add
 
     def _is_type(ctx, m, t):
         if m in ctx:
