@@ -15,7 +15,7 @@ for i in $src; do
 
     rm $o $v
 
-    e="python3 $i generate $v -s"
+    e="python3 $i generate $v"
     echo $e "> $o"
     $e > $o
     echo "if __name__ == '__main__':" >> $o
