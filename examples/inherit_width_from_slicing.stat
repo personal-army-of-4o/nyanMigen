@@ -1,0 +1,7 @@
+source chars: 106
+result chars: 632
+decompression ratio: 5.962264150943396
+inputs(0): []
+outputs(1): ['led: Signal()']
+generics(0): []
+domains(1): ['sync']

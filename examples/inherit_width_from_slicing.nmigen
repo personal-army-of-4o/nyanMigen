@@ -1,0 +1,33 @@
+
+from nmigen import *
+from nmigen.cli import main
+
+class inherit_width_from_slicing(Elaboratable):
+
+    def main():
+        top = inherit_width_from_slicing()
+        main(top, name='inherit_width_from_slicing', ports=top.ports())
+
+    def __init__(self):
+        pass
+        self.led = Signal()
+
+    def ports(self):
+        return [self.led]
+
+    def inputs(self):
+        return []
+
+    def outputs(self):
+        return [self.led]
+
+    def elaborate(self, platform):
+        m = Module()
+        cnt = Signal(24)
+        m.d.sync += cnt.eq((cnt + 1))
+        led = self.led
+        m.d.comb += led.eq(cnt[23])
+        return m
+
+if __name__ == '__main__':
+    inherit_width_from_slicing.main()
