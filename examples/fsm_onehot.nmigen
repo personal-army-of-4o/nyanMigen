@@ -1,0 +1,45 @@
+
+from nmigen import *
+from nmigen.cli import main
+
+class fsm_onehot(Elaboratable):
+
+    def main():
+        top = fsm_onehot()
+        main(top, name='fsm_onehot', ports=top.ports())
+
+    def __init__(self):
+        pass
+        self.o = Signal()
+
+    def ports(self):
+        return [self.o]
+
+    def inputs(self):
+        return []
+
+    def outputs(self):
+        return [self.o]
+
+    def elaborate(self, platform):
+        m = Module()
+        state = Signal(4)
+        o = self.o
+        with m.Switch(state):
+            with m.Case(1):
+                m.d.comb += o.eq(0)
+            with m.Case(2):
+                m.d.comb += o.eq(0)
+            with m.Case(4):
+                m.d.comb += o.eq(1)
+        with m.Switch(state):
+            with m.Case(1):
+                m.d.sync += state.eq(2)
+            with m.Case(2):
+                m.d.sync += state.eq(4)
+            with m.Case(4):
+                m.d.sync += state.eq(8)
+        return m
+
+if __name__ == '__main__':
+    fsm_onehot.main()

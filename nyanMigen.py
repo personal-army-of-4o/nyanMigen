@@ -1,6 +1,6 @@
 import ast
 import inspect
-from ast import Assign, AugAssign, Name, Load, Store, Call, If, Subscript, Num, Attribute, IfExp
+from ast import Assign, AugAssign, Name, Load, Store, Call, If, Subscript, Num, Attribute, IfExp,  Str, With, withitem
 from pprintast import pprintast as ppa
 from astunparse import unparse
 
@@ -45,7 +45,9 @@ def classify(cls):
         cls_str = "class " + name + ":\n    def elaborate(self, platform):\n        pass"
         ret = ast.parse(cls_str)
 
-        cls = ast.parse(inspect.getsource(cls)).body[0]
+        s = inspect.getsource(cls)
+        s = nyanMigen.fix_case(s)
+        cls = ast.parse(s).body[0]
         cls.name = 'elaborate'
         cls.args = ast.parse("def foo(self, platform):\n    pass").body[0].args
         cls.decorator_list = []
@@ -141,8 +143,9 @@ class nyanMigen:
         return mod[name]
 
     def fix(code):
+        (code.body, ctx) = nyanMigen._convert_fsms(code.body)
         nyanMigen._add_module(code)
-        (code.body, ctx) = nyanMigen._nyanify(code.body)
+        (code.body, ctx) = nyanMigen._nyanify(code.body, ctx)
         nyanMigen._replace_ports_assigns(code.body, ctx)
         nyanMigen._add_return_module(code.body)
         nyanMigen._add_generics_to_elaborate(code, ctx)
@@ -203,6 +206,174 @@ class nyanMigen:
         )
         code = ast.parse(str)
         return code.body[0]
+
+    def _convert_fsms(body, ctx = []):
+        fsms = {}
+        for i in body:
+            try:
+                nyanMigen._parse_fsm_init(i, fsms)
+            except:
+                pass
+        for i in body:
+            try:
+                nyanMigen._parse_fsm_states(i, fsms)
+            except:
+                pass
+
+        ins = []
+        for i in range(len(body)):
+            try:
+                add = nyanMigen._fix_fsm_init(body[i], fsms)
+                if add:
+                    ins.append((i, add))
+            except:
+                pass
+
+        inc = 0
+        for i in ins:
+            j = i[0] + inc
+            del body[j]
+            body[j:j] = i[1]
+            inc += len(i[1])-1
+
+        for i in range(len(body)):
+            try:
+                body[i] = nyanMigen._fix_fsm_states(body[i], fsms)
+            except:
+                pass
+        return (body, ctx)
+
+    def _parse_fsm_init(code, fsms):
+        if nyanMigen._is_fsm_init(code):
+            names = []
+            for i in code.targets:
+                if isinstance(i, Name):
+                    if isinstance(i.ctx, Store):
+                        names.append(i.id)
+            kw = code.value.keywords
+
+            enc_index = None
+            enc = None
+            for i in range(len(kw)):
+                if kw[i].arg == 'encoding':
+                    enc_index = i
+                    enc = kw[i].value.s
+
+            del kw[i]
+
+            found = False
+            for i in kw:
+                if i.arg == 'domain':
+                    found = True
+
+            if not found:
+                pass
+#                kw.append(ast.parse("a = Signal(domain = sync)").body[0].value.keywords[0])
+
+            for i in names:
+                if i in fsms:
+                    print("warning: redefining fsm", i)
+                fsms[i] = {}
+                fsms[i]['kws'] = kw
+                fsms[i]['encoding'] = enc
+
+    def _parse_fsm_states(code, fsms):
+        n = nyanMigen._is_fsm_switch(code, fsms)
+        if n:
+            fsms[n]['values'] = nyanMigen._parse_fsm_states_from_cases(code)
+            add = nyanMigen._parse_fsm_states_from_assigns(code, n)
+            fsms[n]['values'] = fsms[n]['values'] + list(set(add) - set(fsms[n]['values']))
+
+    def _parse_fsm_states_from_cases(code):
+        ret = []
+        for i in code.body:
+            ret.append(i.items[0].context_expr.args[0].id)
+        return ret
+
+    def _parse_fsm_states_from_assigns(code, n):
+        ret = []
+        for i in code.body:
+            for j in i.body:
+                try:
+                    for k in j.targets:
+                        try:
+                            check = k.id
+                        except:
+                            try:
+                                check = k.attr
+                            except:
+                                pass
+                        try:
+                            if check == n:
+                                ret.append(j.value.id)
+                                break
+                        except:
+                            pass
+                except:
+                    pass
+        return ret
+
+    def _fix_fsm_init(code, fsms):
+        if nyanMigen._is_fsm_init(code):
+            ret = []
+            for i in code.targets:
+                try:
+                    enc = fsms[i.id]['encoding']
+                    vs = fsms[i.id]['values']
+                    width = nyanMigen._get_fsm_state_width(enc, vs)
+                    add = ast.parse("a = Signal(" + str(width) + ")").body[0]
+                    add.targets = [i]
+                    add.value.keywords = fsms[i.id]['kws']
+                    ret.append(add)
+                    ret.extend(nyanMigen._gen_fsm_states(enc, vs))
+                except:
+                    pass
+            return ret
+
+    def _gen_fsm_states(enc, vs):
+        ret = []
+        if enc == 'onehot':
+            for i in range(len(vs)):
+                s = vs[i] + " = " + str(pow(2, i))
+                ret.append(ast.parse(s).body[0])
+            return ret
+
+    def _get_fsm_state_width(encoding, values):
+        if encoding == 'onehot':
+            return str(len(values))
+
+    def _fix_fsm_states(code, fsms):
+        if nyanMigen._is_fsm_switch(code, fsms):
+            pass
+        return code
+
+    def _is_fsm_init(code):
+        is_assign = isinstance(code, Assign)
+        is_fsm = (
+            isinstance(code.value, Call) and
+            isinstance(code.value.func, Name) and
+            isinstance(code.value.func.ctx, Load) and
+            code.value.func.id == 'Fsm'
+        )
+        return is_assign and is_fsm
+
+    def _is_fsm_switch(code, fsms):
+        if (isinstance(code, With) and
+            len(code.items) == 1 and
+            isinstance(code.items[0], withitem) and
+            isinstance(code.items[0].context_expr, Call) and
+            isinstance(code.items[0].context_expr.func, Attribute) and
+            isinstance(code.items[0].context_expr.func.value, Name) and
+            isinstance(code.items[0].context_expr.func.value.ctx, Load) and
+            code.items[0].context_expr.func.attr == 'Switch' and
+            len(code.items[0].context_expr.args) == 1 and
+            len(code.items[0].context_expr.keywords) == 0 and
+            isinstance(code.items[0].context_expr.args[0], Name) and
+            isinstance(code.items[0].context_expr.args[0].ctx, Load)
+        ):
+            n = code.items[0].context_expr.args[0].id
+            if n in fsms:
+                return n
 
     def _add_generics_to_elaborate(body, ctx):
         generics = []
