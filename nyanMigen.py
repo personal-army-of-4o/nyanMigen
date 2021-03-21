@@ -494,16 +494,25 @@ class nyanMigen:
                 isinstance(code.value.func.ctx, Load)
             ):
                 fp = False
+                domain = None
+                to_del = None
                 if len(code.value.keywords) > 0:
                     kw = code.value.keywords
                     for i in range(len(kw)):
                         if kw[i].arg == "port" and kw[i].value.value == True:
                             fp = True
+                        if kw[i].arg == 'domain':
+                            domain = kw[i].value.s
+                            to_del = i
+                if to_del:
+                    del code.value.keywords[to_del]
                 for i in code.targets:
                     if isinstance(i, Name):
                         if isinstance(i.ctx, Store):
                             nyanMigen._set_type(ctx, i.id, "Signal()", code.value.args)
                             ctx[i.id]["forced_port"] = fp
+                            if domain:
+                                ctx[i.id]['domain'] = domain
                             nyanMigen._parse_deps(code.value.args, ctx)
 
                             add = ast.parse("a = b").body[0]
@@ -561,9 +570,9 @@ class nyanMigen:
                 nyanMigen._parse_deps(slice, ctx)
             nyanMigen._add_target(target, ctx, domain = domain)
             if add:
-                return [add, nyanMigen._dump_assign(module, domain, target, value, slice)]
+                return [add, nyanMigen._dump_assign(module, domain, target, value, slice, ctx)]
             else:
-                return nyanMigen._dump_assign(module, domain, target, value, slice)
+                return nyanMigen._dump_assign(module, domain, target, value, slice, ctx)
         else:
             raise Exception()
 
@@ -692,10 +701,11 @@ class nyanMigen:
         if target in ctx:
             if nyanMigen._is_signal(ctx, target):
                 ctx[target]["is_driven"] = True
-                if "domain" in ctx[target]:
-                    if domain != ctx[target]["domain"]:
-                        print("warning: redefining signal", target, "domain")
-                ctx[target]["domain"] = domain
+                if domain:
+                    if "domain" in ctx[target]:
+                        if domain != ctx[target]["domain"]:
+                            print("warning: redefining signal", target, "domain")
+                    ctx[target]["domain"] = domain
 
     def _parse_deps(value, ctx = {}, is_func = False):
         ret = []
@@ -786,7 +796,7 @@ class nyanMigen:
         if not n in ctx:
             ctx[n] = {}
         if "type" in ctx[n]:
-            print("warning: redefining type on", n)
+            print("warning: redefining type on", n, ctx[n]['type'], "->", v)
         ctx[n]["type"] = v
         if v != "Module()":
             ctx[n]["driver"] = False
@@ -888,9 +898,12 @@ class nyanMigen:
         elif isinstance(code, Attribute):
             return (code.value.id, code.attr, value, s)
 
-    def _dump_assign(m, d, t, v, s = None):
+    def _dump_assign(m, d, t, v, s = None, ctx = []):
         if not d:
-            d = "comb"
+            if 'domain' in ctx[t]:
+                d = ctx[t]['domain']
+            else:
+                d = "comb"
         ret = ast.parse("m.d.sync += t.eq(v)").body[0]
         ret.value.func.value.id = t
         ret.value.args = [v]
