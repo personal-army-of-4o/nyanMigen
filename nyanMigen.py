@@ -287,7 +287,7 @@ class nyanMigen:
     def _parse_fsm_states_from_cases(code):
         ret = []
         for i in code.body:
-            ret.append(i.items[0].context_expr.args[0].id)
+            ret.append(i.items[0].context_expr.args[0].s)
         return ret
 
     def _parse_fsm_states_from_assigns(code, n):
@@ -305,7 +305,7 @@ class nyanMigen:
                                 pass
                         try:
                             if check == n:
-                                ret.append(j.value.id)
+                                ret.append(j.value.s)
                                 break
                         except:
                             pass
@@ -325,17 +325,16 @@ class nyanMigen:
                     add.targets = [i]
                     add.value.keywords = fsms[i.id]['kws']
                     ret.append(add)
-                    ret.extend(nyanMigen._gen_fsm_states(enc, vs))
                 except:
                     pass
             return ret
 
-    def _gen_fsm_states(enc, vs):
-        ret = []
+    def _gen_fsm_states_dic(enc, vs):
+        ret = {}
         if enc == 'onehot':
             for i in range(len(vs)):
                 s = vs[i] + " = " + str(pow(2, i))
-                ret.append(ast.parse(s).body[0])
+                ret[vs[i]] = ast.parse(s).body[0].value
             return ret
 
     def _get_fsm_state_width(encoding, values):
@@ -343,8 +342,32 @@ class nyanMigen:
             return str(len(values))
 
     def _fix_fsm_states(code, fsms):
-        if nyanMigen._is_fsm_switch(code, fsms):
-            pass
+        n = nyanMigen._is_fsm_switch(code, fsms)
+        if n:
+            enc = fsms[n]['encoding']
+            vs = fsms[n]['values']
+            dic = nyanMigen._gen_fsm_states_dic(enc, vs)
+            for i in code.body:
+                i.items[0].context_expr.args[0] = dic[i.items[0].context_expr.args[0].s]
+
+                for j in i.body:
+                    try:
+                        for k in j.targets:
+                            try:
+                                check = k.id
+                            except:
+                                try:
+                                    check = k.attr
+                                except:
+                                    pass
+                            try:
+                                if check == n:
+                                    j.value = dic[j.value.s]
+                                    break
+                            except:
+                                pass
+                    except:
+                        pass
         return code
 
     def _is_fsm_init(code):
