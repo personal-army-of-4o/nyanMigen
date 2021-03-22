@@ -1,6 +1,6 @@
 import ast
 import inspect
-from ast import Assign, AugAssign, Name, Load, Store, Call, If, Subscript, Num, Attribute, IfExp,  Str, With, withitem
+from ast import Assign, AugAssign, Name, Load, Store, Call, If, Subscript, Num, Attribute, IfExp,  Str, With, withitem, Compare, Eq
 from pprintast import pprintast as ppa
 from astunparse import unparse
 
@@ -241,6 +241,12 @@ class nyanMigen:
                 body[i] = nyanMigen._fix_fsm_states(body[i], fsms)
             except:
                 pass
+
+        for i in range(len(body)):
+            try:
+                body[i] = nyanMigen._fix_fsm_comparison(body[i], fsms)
+            except:
+                pass
         return (body, ctx)
 
     def _parse_fsm_init(code, fsms):
@@ -345,6 +351,58 @@ class nyanMigen:
                 s = vs[i] + " = " + str(pow(2, i))
                 ret[vs[i]] = ast.parse(s).body[0].value
             return ret
+
+    def _fix_fsm_comparison(code, fsms):
+        def fix(code, vars):
+            if (
+                isinstance(code, Compare) and
+                isinstance(code.left, Name) and
+                isinstance(code.left.ctx, Load) and
+                code.left.id in fsms and
+                len(code.ops) == 1 and
+                isinstance(code.ops[0], Eq) and
+                len(code.comparators) == 1 and
+                isinstance(code.comparators[0], Str)
+            ):
+                n = code.left.id
+                enc = fsms[n]['encoding']
+                vs = fsms[n]['values']
+                val = nyanMigen._gen_fsm_states_dic(enc, vs)[code.comparators[0].s]
+                code.comparators[0]=val
+                return code
+        return nyanMigen._loop_through_ast(code, fix, fsms)
+
+    # TODO: merge this code with _parse_deps
+    def _loop_through_ast(code, foo, vars):
+        if isinstance(code, list):
+            to_del = []
+            for i in range(len(code)):
+                n = nyanMigen._loop_through_ast(i, foo, vars)
+                if n:
+                    code[i] = n
+                else:
+                    to_del.append(i)
+            for i in sorted(to_del, reverse = True):
+                del code[i]
+            return code
+        else:
+            ret = None
+            try:
+                ret = foo(code, vars)
+                if ret:
+                    return ret
+                else:
+                    raise Exception()
+            except:
+                for i in code.__dict__.keys():
+                    try:
+                        attr = getattr(code, i)
+                        val = nyanMigen._loop_through_ast(attr, foo, vars)
+                        setattr(code, i, val)
+                    except Exception as e:
+                        pass
+                return code
+        return ret
 
     def _get_fsm_state_width(encoding, values):
         if encoding == 'onehot':
