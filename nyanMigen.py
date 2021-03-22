@@ -252,14 +252,18 @@ class nyanMigen:
                         names.append(i.id)
             kw = code.value.keywords
 
-            enc_index = None
+            to_del = []
             enc = None
             for i in range(len(kw)):
                 if kw[i].arg == 'encoding':
-                    enc_index = i
+                    to_del.append(i)
                     enc = kw[i].value.s
+                if kw[i].arg == 'init':
+                    to_del.append(i)
+                    init = kw[i].value.s
 
-            del kw[i]
+            for i in sorted(to_del, reverse = True):
+                del kw[i]
 
             found = False
             for i in kw:
@@ -276,6 +280,7 @@ class nyanMigen:
                 fsms[i] = {}
                 fsms[i]['kws'] = kw
                 fsms[i]['encoding'] = enc
+                fsms[i]['init'] = init
 
     def _parse_fsm_states(code, fsms):
         n = nyanMigen._is_fsm_switch(code, fsms)
@@ -324,6 +329,10 @@ class nyanMigen:
                     add = ast.parse("a = Signal(" + str(width) + ")").body[0]
                     add.targets = [i]
                     add.value.keywords = fsms[i.id]['kws']
+                    if 'init' in fsms[i.id]:
+                        init = nyanMigen._gen_fsm_states_dic(enc, vs)[fsms[i.id]['init']]
+                        initkw = ast.parse("a = b (reset = " + str(init.n) + ")").body[0].value.keywords[0]
+                        add.value.keywords.append(initkw)
                     ret.append(add)
                 except:
                     pass
