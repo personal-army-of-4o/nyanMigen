@@ -1,0 +1,38 @@
+
+from nmigen import *
+from nmigen.cli import main
+
+class switch(Elaboratable):
+
+    def main():
+        top = switch()
+        main(top, name='switch', ports=top.ports())
+
+    def __init__(self):
+        pass
+        self.a = Signal(2)
+        self.b = Signal(2)
+
+    def ports(self):
+        return [self.a, self.b]
+
+    def inputs(self):
+        return [self.a]
+
+    def outputs(self):
+        return [self.b]
+
+    def elaborate(self, platform):
+        m = Module()
+        a = self.a
+        b = self.b
+        with m.Switch(a):
+            m.d.comb += b.eq(3)
+            with m.Case(0):
+                m.d.comb += b.eq(1)
+            with m.Case(1):
+                m.d.comb += b.eq(0)
+        return m
+
+if __name__ == '__main__':
+    switch.main()
