@@ -259,7 +259,7 @@ class nyanMigen:
                     enc_index = i
                     enc = kw[i].value.s
 
-            del kw[i]
+            del kw[enc_index]
 
             found = False
             for i in kw:
