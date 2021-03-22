@@ -12,7 +12,7 @@ for i in $src; do
     o=$n.nmigen
     v=$n.v
 
-    rm $o $v
+    rm $o -f
 
     e="python3 $i generate $v"
     echo $e "> $o"
