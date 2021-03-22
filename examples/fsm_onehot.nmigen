@@ -27,7 +27,7 @@ class fsm_onehot(Elaboratable):
 
     def elaborate(self, platform):
         m = Module()
-        state = Signal(4)
+        state = Signal(4, reset=1)
         o = self.o
         i = self.i
         o1 = self.o1

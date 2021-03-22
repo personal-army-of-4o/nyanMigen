@@ -3,7 +3,7 @@ from nyanMigen import nyanify
 
 @nyanify()
 def fsm_onehot():
-    state = test = Fsm(encoding = 'onehot')
+    state = test = Fsm(encoding = 'onehot', init = 'one')
     o = Signal()
     i = Signal()
     o1 = Signal()
