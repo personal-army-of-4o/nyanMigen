@@ -5,6 +5,22 @@ from nyanMigen import nyanify
 def fsm_onehot():
     state = test = Fsm(encoding = 'onehot')
     o = Signal()
+    i = Signal()
+    o1 = Signal()
+    o2 = Signal()
+    o3 = Signal()
+
+    o1 = 1 if state == 'one' else 0
+
+    if state == 'one':
+        o2 = 1
+    else:
+        o2 = 0
+
+    if i | (state == 'one'):
+        o3 = 1
+    else:
+        o3 = 0
 
     with switch(state):
         with case('one'):

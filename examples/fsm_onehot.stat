@@ -1,7 +1,7 @@
-source chars: 450
-result chars: 957
-decompression ratio: 2.1266666666666665
-inputs(0): []
-outputs(1): ['o: Signal()']
+source chars: 692
+result chars: 1586
+decompression ratio: 2.291907514450867
+inputs(1): ['i: Signal()']
+outputs(4): ['o: Signal()', 'o1: Signal()', 'o2: Signal()', 'o3: Signal()']
 generics(0): []
 domains(1): ['sync']

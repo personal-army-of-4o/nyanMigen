@@ -10,21 +10,41 @@ class fsm_onehot(Elaboratable):
 
     def __init__(self):
         pass
+        self.i = Signal()
         self.o = Signal()
+        self.o1 = Signal()
+        self.o2 = Signal()
+        self.o3 = Signal()
 
     def ports(self):
-        return [self.o]
+        return [self.i, self.o, self.o1, self.o2, self.o3]
 
     def inputs(self):
-        return []
+        return [self.i]
 
     def outputs(self):
-        return [self.o]
+        return [self.o, self.o1, self.o2, self.o3]
 
     def elaborate(self, platform):
         m = Module()
         state = Signal(4)
         o = self.o
+        i = self.i
+        o1 = self.o1
+        o2 = self.o2
+        o3 = self.o3
+        with m.If((state == 1)):
+            m.d.comb += o1.eq(1)
+        with m.Else():
+            m.d.comb += o1.eq(0)
+        with m.If((state == 1)):
+            m.d.comb += o2.eq(1)
+        with m.Else():
+            m.d.comb += o2.eq(0)
+        with m.If((i | (state == 1))):
+            m.d.comb += o3.eq(1)
+        with m.Else():
+            m.d.comb += o3.eq(0)
         with m.Switch(state):
             with m.Case(1):
                 m.d.comb += o.eq(0)
