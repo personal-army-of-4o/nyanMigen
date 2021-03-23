@@ -282,6 +282,7 @@ class nyanMigen:
 
             to_del = []
             enc = None
+            init = None
             for i in range(len(kw)):
                 if kw[i].arg == 'encoding':
                     to_del.append(i)
@@ -307,8 +308,12 @@ class nyanMigen:
                     print("warning: redefining fsm", i)
                 fsms[i] = {}
                 fsms[i]['kws'] = kw
-                fsms[i]['encoding'] = enc
-                fsms[i]['init'] = init
+                if enc:
+                    fsms[i]['encoding'] = enc
+                else:
+                    fsms[i]['encoding'] = 'onehot'
+                if init:
+                    fsms[i]['init'] = init
 
     def _parse_fsm_states(code, fsms):
         n = nyanMigen._is_fsm_switch(code, fsms)
@@ -374,6 +379,13 @@ class nyanMigen:
                 ret[vs[i]] = ast.parse(s).body[0].value
             return ret
 
+    def _gen_fsm_indexes_dic(enc, vs):
+        ret = {}
+        if enc == 'onehot':
+            for i in range(len(vs)):
+                ret[vs[i]] = i
+            return ret
+
     def _fix_fsm_comparison(code, fsms):
         def fix(code, vars):
             if (
@@ -387,11 +399,18 @@ class nyanMigen:
                 isinstance(code.comparators[0], Str)
             ):
                 n = code.left.id
-                enc = fsms[n]['encoding']
-                vs = fsms[n]['values']
-                val = nyanMigen._gen_fsm_states_dic(enc, vs)[code.comparators[0].s]
-                code.comparators[0]=val
-                return code
+                if fsms[n]['encoding'] == 'onehot':
+                    enc = fsms[n]['encoding']
+                    vs = fsms[n]['values']
+                    val = nyanMigen._gen_fsm_indexes_dic(enc, vs)[code.comparators[0].s]
+                    ret = ast.parse(n + "[" + str(val) + "] == 1").body[0].value
+                    return ret
+                else:
+                    enc = fsms[n]['encoding']
+                    vs = fsms[n]['values']
+                    val = nyanMigen._gen_fsm_states_dic(enc, vs)[code.comparators[0].s]
+                    code.comparators[0]=val
+                    return code
         return nyanMigen._loop_through_ast(code, fix, fsms)
 
     # TODO: merge this code with _parse_deps
