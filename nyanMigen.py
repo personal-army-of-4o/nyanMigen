@@ -247,7 +247,29 @@ class nyanMigen:
                 body[i] = nyanMigen._fix_fsm_comparison(body[i], fsms)
             except:
                 pass
+        for i in range(len(body)):
+            try:
+                body[i] = nyanMigen._gen_fsm_error_signal(body[i], fsms)
+            except:
+                pass
         return (body, ctx)
+
+    def _gen_fsm_error_signal(code, fsms):
+        if (
+            isinstance(code, Assign) and
+            len(code.targets) == 1 and
+            isinstance(code.value, Attribute) and
+            code.value.attr == 'error' and
+            isinstance(code.value.value, Name) and
+            isinstance(code.value.value.ctx,  Load)
+        ):
+            n = code.value.value.id
+            tn = code.targets[0].id
+            if fsms[n]['encoding'] == 'onehot':
+                s = tn + " = 1 if (" + n + " == (" + n + " & (-" + n + "))) else 0"
+                a = ast.parse(s).body[0]
+                return a
+        return code
 
     def _parse_fsm_init(code, fsms):
         if nyanMigen._is_fsm_init(code):

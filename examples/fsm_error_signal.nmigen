@@ -1,0 +1,40 @@
+
+from nmigen import *
+from nmigen.cli import main
+
+class fsm_error_signal(Elaboratable):
+
+    def main():
+        top = fsm_error_signal()
+        main(top, name='fsm_error_signal', ports=top.ports())
+
+    def __init__(self):
+        pass
+        self.o = Signal()
+
+    def ports(self):
+        return [self.o]
+
+    def inputs(self):
+        return []
+
+    def outputs(self):
+        return [self.o]
+
+    def elaborate(self, platform):
+        m = Module()
+        s = Signal(2, reset=1)
+        o = self.o
+        with m.If((s == (s & (- s)))):
+            m.d.comb += o.eq(1)
+        with m.Else():
+            m.d.comb += o.eq(0)
+        with m.Switch(s):
+            with m.Case(1):
+                m.d.comb += s.eq(2)
+            with m.Case(2):
+                m.d.comb += s.eq(1)
+        return m
+
+if __name__ == '__main__':
+    fsm_error_signal.main()
