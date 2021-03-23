@@ -33,15 +33,15 @@ class fsm_onehot(Elaboratable):
         o1 = self.o1
         o2 = self.o2
         o3 = self.o3
-        with m.If((state == 1)):
+        with m.If((state[0] == 1)):
             m.d.comb += o1.eq(1)
         with m.Else():
             m.d.comb += o1.eq(0)
-        with m.If((state == 1)):
+        with m.If((state[1] == 1)):
             m.d.comb += o2.eq(1)
         with m.Else():
             m.d.comb += o2.eq(0)
-        with m.If((i | (state == 1))):
+        with m.If((i | (state[2] == 1))):
             m.d.comb += o3.eq(1)
         with m.Else():
             m.d.comb += o3.eq(0)
