@@ -260,6 +260,7 @@ class nyanMigen:
 
             to_del = []
             enc = None
+            init = None
             for i in range(len(kw)):
                 if kw[i].arg == 'encoding':
                     to_del.append(i)
@@ -285,8 +286,12 @@ class nyanMigen:
                     print("warning: redefining fsm", i)
                 fsms[i] = {}
                 fsms[i]['kws'] = kw
-                fsms[i]['encoding'] = enc
-                fsms[i]['init'] = init
+                if enc:
+                    fsms[i]['encoding'] = enc
+                else:
+                    fsms[i]['encoding'] = 'onehot'
+                if init:
+                    fsms[i]['init'] = init
 
     def _parse_fsm_states(code, fsms):
         n = nyanMigen._is_fsm_switch(code, fsms)
