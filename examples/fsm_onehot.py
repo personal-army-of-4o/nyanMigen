@@ -12,7 +12,7 @@ def fsm_onehot():
 
     o1 = 1 if state == 'one' else 0
 
-    if state == 'two':
+    if 'two' == state:
         o2 = 1
     else:
         o2 = 0

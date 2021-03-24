@@ -393,25 +393,37 @@ class nyanMigen:
         def fix(code, vars):
             if (
                 isinstance(code, Compare) and
-                isinstance(code.left, Name) and
-                isinstance(code.left.ctx, Load) and
-                code.left.id in fsms and
                 len(code.ops) == 1 and
                 isinstance(code.ops[0], Eq) and
-                len(code.comparators) == 1 and
-                isinstance(code.comparators[0], Str)
+                len(code.comparators) == 1
             ):
-                n = code.left.id
+                if (
+                    isinstance(code.left, Name) and
+                    isinstance(code.left.ctx, Load) and
+                    code.left.id in fsms and
+                    isinstance(code.comparators[0], Str)
+                ):
+                    val = code.comparators[0].s
+                    n = code.left.id
+                elif (
+                    isinstance(code.comparators[0], Name) and
+                    isinstance(code.comparators[0].ctx, Load) and
+                    code.comparators[0].id in fsms and
+                    isinstance(code.left, Str)
+                ):
+                    n = code.comparators[0].id
+                    val = code.left.s
+
                 if fsms[n]['encoding'] == 'onehot':
                     enc = fsms[n]['encoding']
                     vs = fsms[n]['values']
-                    val = nyanMigen._gen_fsm_indexes_dic(enc, vs)[code.comparators[0].s]
+                    val = nyanMigen._gen_fsm_indexes_dic(enc, vs)[val]
                     ret = ast.parse(n + "[" + str(val) + "] == 1").body[0].value
                     return ret
                 else:
                     enc = fsms[n]['encoding']
                     vs = fsms[n]['values']
-                    val = nyanMigen._gen_fsm_states_dic(enc, vs)[code.comparators[0].s]
+                    val = nyanMigen._gen_fsm_states_dic(enc, vs)[val]
                     code.comparators[0]=val
                     return code
         return nyanMigen._loop_through_ast(code, fix, fsms)
