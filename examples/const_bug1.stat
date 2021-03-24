@@ -1,0 +1,7 @@
+source chars: 108
+result chars: 571
+decompression ratio: 5.287037037037037
+inputs(1): ['i: Signal()']
+outputs(1): ['o: Signal()']
+generics(0): []
+domains(0): []

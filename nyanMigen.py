@@ -118,6 +118,16 @@ class nyanMigen:
     def propagate_constants(cls_src, ctx):
         c = Context(ctx)
         consts = c.python_constants
+        def fix (code, arg):
+            (n, v) = arg
+            if (isinstance(code, Name) and isinstance(code.ctx, Load) and code.id == n):
+                return v
+        for i in ctx:
+            if ctx[i]['type'] == 'py_const':
+                if ctx[i]['args']:
+                    for j in ctx:
+                        if ctx[j]['type'] == 'py_const':
+                            nyanMigen._loop_through_ast(ctx[j]['args'], fix, (i, ctx[i]['args']))
         for i in consts:
             nyanMigen._expand_const(cls_src, i, ctx[i]["args"])
 
