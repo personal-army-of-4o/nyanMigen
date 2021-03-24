@@ -1,0 +1,42 @@
+
+from nmigen import *
+from nmigen.cli import main
+
+class fsm_encoding_bug1(Elaboratable):
+
+    def main():
+        top = fsm_encoding_bug1()
+        main(top, name='fsm_encoding_bug1', ports=top.ports())
+
+    def __init__(self):
+        self.iStart = Signal()
+        self.oError = Signal()
+
+    def ports(self):
+        return [self.iStart, self.oError]
+
+    def inputs(self):
+        return [self.iStart]
+
+    def outputs(self):
+        return [self.oError]
+
+    def elaborate(self, platform):
+        m = Module()
+        state = Signal(2, reset=1)
+        iStart = self.iStart
+        oError = self.oError
+        with m.Switch(state):
+            with m.Case(1):
+                with m.If(iStart):
+                    m.d.sync += state.eq(2)
+            with m.Case(2):
+                m.d.sync += state.eq(1)
+        with m.If((state == (state & (- state)))):
+            m.d.comb += oError.eq(1)
+        with m.Else():
+            m.d.comb += oError.eq(0)
+        return m
+
+if __name__ == '__main__':
+    fsm_encoding_bug1.main()

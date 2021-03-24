@@ -7,8 +7,8 @@ class indexing:
         n = 3
         inp = Signal(n**n)
         outp = Signal(n**n)
-        ari = Array(Array(Signal() for _ in range(n)) for _ in range(n))
-        aro = Array(Array(Signal() for _ in range(n)) for _ in range(n))
+        ari = Array(Array(Array(Signal() for _ in range(n)) for _ in range(n)) for _ in range(n))
+        aro = Array((Array(Array(Signal() for _ in range(n)) for _ in range(n)) for _ in range(n)), domain = 'sync')
 
         for i in range(n):
             for j in range(n):
@@ -19,6 +19,6 @@ class indexing:
         for i in range(n):
             for j in range(n):
                 for k in range(n):
-                    sync.aro[i][j][k] = ari[j][k][i]
+                    aro[i][j][k] = ari[j][k][i]
 
         outp = Cat(Cat(aro))

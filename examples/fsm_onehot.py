@@ -32,8 +32,8 @@ def fsm_onehot():
 
     with switch(state):
         with case('one'):
-            sync.state = 'two'
+            state = 'two'
         with case('two'):
-            sync.state = 'three'
+            state = 'three'
         with case('three'):
-            sync.state = 'four'
+            state = 'four'
