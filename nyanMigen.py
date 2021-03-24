@@ -442,7 +442,7 @@ class nyanMigen:
         if isinstance(code, list):
             to_del = []
             for i in range(len(code)):
-                n = nyanMigen._loop_through_ast(i, foo, vars)
+                n = nyanMigen._loop_through_ast(code[i], foo, vars)
                 if n:
                     code[i] = n
                 else:
@@ -455,18 +455,17 @@ class nyanMigen:
             try:
                 ret = foo(code, vars)
                 if ret:
-                    return ret
-                else:
-                    raise Exception()
+                    code = ret
             except:
-                for i in code.__dict__.keys():
-                    try:
-                        attr = getattr(code, i)
-                        val = nyanMigen._loop_through_ast(attr, foo, vars)
-                        setattr(code, i, val)
-                    except Exception as e:
-                        pass
-                return code
+                pass
+            for i in code.__dict__.keys():
+                try:
+                    attr = getattr(code, i)
+                    val = nyanMigen._loop_through_ast(attr, foo, vars)
+                    setattr(code, i, val)
+                except Exception as e:
+                    pass
+            return code
         return ret
 
     def _get_fsm_state_width(encoding, values):
@@ -474,6 +473,20 @@ class nyanMigen:
             return str(len(values))
 
     def _fix_fsm_states(code, fsms):
+        def fix(code, fsms):
+            if (
+                isinstance(code, Assign) and
+                len(code.targets) == 1 and
+                isinstance(code.targets[0], Name) and
+                code.targets[0].id in fsms and
+                isinstance(code.value, Str)
+            ):
+                n = code.targets[0].id
+                v = code.value.s
+                enc = fsms[n]['encoding']
+                vs = fsms[n]['values']
+                code.value = nyanMigen._gen_fsm_states_dic(enc, vs)[v]
+                return code
         n = nyanMigen._is_fsm_switch(code, fsms)
         if n:
             enc = fsms[n]['encoding']
@@ -481,26 +494,7 @@ class nyanMigen:
             dic = nyanMigen._gen_fsm_states_dic(enc, vs)
             for i in code.body:
                 i.items[0].context_expr.args[0] = dic[i.items[0].context_expr.args[0].s]
-
-                for j in i.body:
-                    try:
-                        for k in j.targets:
-                            try:
-                                check = k.id
-                            except:
-                                try:
-                                    check = k.attr
-                                except:
-                                    pass
-                            try:
-                                if check == n:
-                                    j.value = dic[j.value.s]
-                                    break
-                            except:
-                                pass
-                    except:
-                        pass
-        return code
+        return nyanMigen._loop_through_ast(code, fix, fsms)
 
     def _is_fsm_init(code):
         is_assign = isinstance(code, Assign)
@@ -610,7 +604,10 @@ class nyanMigen:
                     pass
             if not converted:
                 print("failed to convert line")
-                ppa(i)
+                try:
+                    ppa(i)
+                except:
+                    print(i)
             if isinstance(i, list):
                 ret.extend(i)
             else:
@@ -655,15 +652,25 @@ class nyanMigen:
                 return ret
             elif (
                 code.value.func.id == "Array" and
-                isinstance(code.value.func.ctx, Load) and
-                len(code.value.keywords) == 0
+                isinstance(code.value.func.ctx, Load)
             ):
+                to_del = []
+                domain = None
+                if len(code.value.keywords) > 0:
+                    kw = code.value.keywords
+                    for i in range(len(kw)):
+                        if kw[i].arg == 'domain':
+                            domain = kw[i].value.s
+                            to_del.append(i)
+                for i in sorted(to_del, reverse = True):
+                    del code.value.keywords[i]
                 for i in code.targets:
                     if isinstance(i, Name):
                         if isinstance(i.ctx, Store):
                             nyanMigen._set_type(ctx, i.id, "Array()", code.value.args)
                             ctx[i.id]["forced_port"] = False
-
+                            if domain:
+                                ctx[i.id]['domain'] = domain
                             add = ast.parse("a = b").body[0]
                             add.value = code.value
                             add.targets = [i]

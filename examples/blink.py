@@ -3,7 +3,7 @@ from nyanMigen import nyanify
 
 @nyanify()
 def blink():
-    cnt = Signal(24)
+    cnt = Signal(24, domain = 'sync')
 
-    sync.cnt = cnt+1
+    cnt = cnt+1
     led = cnt[23]
