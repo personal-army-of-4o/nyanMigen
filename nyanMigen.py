@@ -310,8 +310,7 @@ class nyanMigen:
                     found = True
 
             if not found:
-                pass
-#                kw.append(ast.parse("a = Signal(domain = sync)").body[0].value.keywords[0])
+                kw.append(ast.parse("a = Signal(domain = 'sync')").body[0].value.keywords[0])
 
             for i in names:
                 if i in fsms:
@@ -613,17 +612,18 @@ class nyanMigen:
             ):
                 fp = False
                 domain = None
-                to_del = None
+                to_del = []
                 if len(code.value.keywords) > 0:
                     kw = code.value.keywords
                     for i in range(len(kw)):
                         if kw[i].arg == "port" and kw[i].value.value == True:
                             fp = True
+                            to_del.append(i)
                         if kw[i].arg == 'domain':
                             domain = kw[i].value.s
-                            to_del = i
-                if to_del:
-                    del code.value.keywords[to_del]
+                            to_del.append(i)
+                for i in sorted(to_del, reverse = True):
+                    del code.value.keywords[i]
                 for i in code.targets:
                     if isinstance(i, Name):
                         if isinstance(i.ctx, Store):
