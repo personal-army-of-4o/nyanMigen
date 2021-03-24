@@ -1,6 +1,6 @@
 import ast
 import inspect
-from ast import Assign, AugAssign, Name, Load, Store, Call, If, Subscript, Num, Attribute, IfExp,  Str, With, withitem, Compare, Eq
+from ast import *
 from pprintast import pprintast as ppa
 from astunparse import unparse
 
