@@ -26,10 +26,10 @@ class fsm_default_encoding(Elaboratable):
         o = self.o
         with m.Switch(s):
             with m.Case(1):
-                m.d.comb += s.eq(2)
+                m.d.sync += s.eq(2)
                 m.d.comb += o.eq(1)
             with m.Case(2):
-                m.d.comb += s.eq(1)
+                m.d.sync += s.eq(1)
                 m.d.comb += o.eq(0)
         return m
 

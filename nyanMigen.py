@@ -118,6 +118,16 @@ class nyanMigen:
     def propagate_constants(cls_src, ctx):
         c = Context(ctx)
         consts = c.python_constants
+        def fix (code, arg):
+            (n, v) = arg
+            if (isinstance(code, Name) and isinstance(code.ctx, Load) and code.id == n):
+                return v
+        for i in ctx:
+            if ctx[i]['type'] == 'py_const':
+                if ctx[i]['args']:
+                    for j in ctx:
+                        if ctx[j]['type'] == 'py_const':
+                            nyanMigen._loop_through_ast(ctx[j]['args'], fix, (i, ctx[i]['args']))
         for i in consts:
             args = ctx[i]['args'] if 'args' in ctx[i] else []
             nyanMigen._expand_const(cls_src, i, args)
@@ -303,8 +313,7 @@ class nyanMigen:
                     found = True
 
             if not found:
-                pass
-#                kw.append(ast.parse("a = Signal(domain = sync)").body[0].value.keywords[0])
+                kw.append(ast.parse("a = Signal(domain = 'sync')").body[0].value.keywords[0])
 
             for i in names:
                 if i in fsms:

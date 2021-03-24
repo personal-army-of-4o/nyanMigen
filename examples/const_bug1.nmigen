@@ -1,0 +1,33 @@
+
+from nmigen import *
+from nmigen.cli import main
+
+class const_bug1(Elaboratable):
+
+    def main():
+        top = const_bug1()
+        main(top, name='const_bug1', ports=top.ports())
+
+    def __init__(self):
+        pass
+        self.i = Signal(32)
+        self.o = Signal()
+
+    def ports(self):
+        return [self.i, self.o]
+
+    def inputs(self):
+        return [self.i]
+
+    def outputs(self):
+        return [self.o]
+
+    def elaborate(self, platform):
+        m = Module()
+        i = self.i
+        o = self.o
+        m.d.comb += o.eq(i[(3 * 2)])
+        return m
+
+if __name__ == '__main__':
+    const_bug1.main()
