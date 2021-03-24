@@ -9,7 +9,6 @@ class fsm_error_signal(Elaboratable):
         main(top, name='fsm_error_signal', ports=top.ports())
 
     def __init__(self):
-        pass
         self.o = Signal()
 
     def ports(self):

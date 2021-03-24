@@ -9,7 +9,6 @@ class indirect_sink_source_relation(Elaboratable):
         main(top, name='indirect_sink_source_relation', ports=top.ports())
 
     def __init__(self):
-        pass
         self.a = Signal()
         self.b = Signal()
 

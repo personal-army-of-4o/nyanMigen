@@ -9,7 +9,6 @@ class blink(Elaboratable):
         main(top, name='blink', ports=top.ports())
 
     def __init__(self):
-        pass
         self.led = Signal()
 
     def ports(self):

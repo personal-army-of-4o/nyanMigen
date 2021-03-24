@@ -9,7 +9,6 @@ class fsm_default_encoding(Elaboratable):
         main(top, name='fsm_default_encoding', ports=top.ports())
 
     def __init__(self):
-        pass
         self.o = Signal()
 
     def ports(self):

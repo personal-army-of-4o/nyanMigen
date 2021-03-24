@@ -1,0 +1,34 @@
+
+from nmigen import *
+from nmigen.cli import main
+
+class signal_renamed(Elaboratable):
+
+    def main():
+        top = signal_renamed()
+        main(top, name='signal_renamed', ports=top.ports())
+
+    def __init__(self):
+        self.i = Signal()
+        self.o = Signal(name='os')
+
+    def ports(self):
+        return [self.i, self.o]
+
+    def inputs(self):
+        return [self.i]
+
+    def outputs(self):
+        return [self.o]
+
+    def elaborate(self, platform):
+        m = Module()
+        i = self.i
+        s = Signal(name='sig')
+        o = self.o
+        m.d.comb += s.eq(i)
+        m.d.comb += o.eq(s)
+        return m
+
+if __name__ == '__main__':
+    signal_renamed.main()

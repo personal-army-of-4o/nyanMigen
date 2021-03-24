@@ -1,6 +1,6 @@
 source chars: 106
-result chars: 632
-decompression ratio: 5.962264150943396
+result chars: 619
+decompression ratio: 5.839622641509434
 inputs(0): []
 outputs(1): ['led: Signal()']
 generics(0): []

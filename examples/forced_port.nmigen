@@ -9,7 +9,6 @@ class forced_port(Elaboratable):
         main(top, name='forced_port', ports=top.ports())
 
     def __init__(self):
-        pass
         self.a = Signal(5)
         self.b = Signal(5)
         self.c = Signal(5)

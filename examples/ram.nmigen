@@ -12,7 +12,6 @@ class ram(Elaboratable):
         main(top, name='ram', ports=top.ports())
 
     def __init__(self, aw, dw):
-        pass
         self.aw = aw
         self.dw = dw
         self.wr_en = Signal()

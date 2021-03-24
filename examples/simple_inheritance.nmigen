@@ -9,7 +9,6 @@ class simple_inheritance(Elaboratable):
         main(top, name='simple_inheritance', ports=top.ports())
 
     def __init__(self):
-        pass
         self.ins = Signal()
         self.inv = Signal(32)
         self.outs = Signal()

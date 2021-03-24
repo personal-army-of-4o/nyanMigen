@@ -1,6 +1,6 @@
 import ast
 import inspect
-from ast import Assign, AugAssign, Name, Load, Store, Call, If, Subscript, Num, Attribute, IfExp,  Str, With, withitem, Compare, Eq
+from ast import *
 from pprintast import pprintast as ppa
 from astunparse import unparse
 
@@ -129,7 +129,8 @@ class nyanMigen:
                         if ctx[j]['type'] == 'py_const':
                             nyanMigen._loop_through_ast(ctx[j]['args'], fix, (i, ctx[i]['args']))
         for i in consts:
-            nyanMigen._expand_const(cls_src, i, ctx[i]["args"])
+            args = ctx[i]['args'] if 'args' in ctx[i] else []
+            nyanMigen._expand_const(cls_src, i, args)
 
     def parse(cls, fn):
         code = None
@@ -187,10 +188,12 @@ class nyanMigen:
             else:
                 raise Failure("unknown signal type for signal " + i)
             add.targets[0].attr = i
-            if ctx[i]["args"]:
+            if "keywords" in ctx[i]:
+                add.value.keywords = ctx[i]["keywords"]
+            if 'args' in ctx[i]:
                 add.value.args = ctx[i]["args"]
             body.append(add)
-        code.body.extend(body)
+        code.body = body
         return code
 
     def gen_exec(cls, ctx, generics_file):
@@ -399,25 +402,37 @@ class nyanMigen:
         def fix(code, vars):
             if (
                 isinstance(code, Compare) and
-                isinstance(code.left, Name) and
-                isinstance(code.left.ctx, Load) and
-                code.left.id in fsms and
                 len(code.ops) == 1 and
                 isinstance(code.ops[0], Eq) and
-                len(code.comparators) == 1 and
-                isinstance(code.comparators[0], Str)
+                len(code.comparators) == 1
             ):
-                n = code.left.id
+                if (
+                    isinstance(code.left, Name) and
+                    isinstance(code.left.ctx, Load) and
+                    code.left.id in fsms and
+                    isinstance(code.comparators[0], Str)
+                ):
+                    val = code.comparators[0].s
+                    n = code.left.id
+                elif (
+                    isinstance(code.comparators[0], Name) and
+                    isinstance(code.comparators[0].ctx, Load) and
+                    code.comparators[0].id in fsms and
+                    isinstance(code.left, Str)
+                ):
+                    n = code.comparators[0].id
+                    val = code.left.s
+
                 if fsms[n]['encoding'] == 'onehot':
                     enc = fsms[n]['encoding']
                     vs = fsms[n]['values']
-                    val = nyanMigen._gen_fsm_indexes_dic(enc, vs)[code.comparators[0].s]
+                    val = nyanMigen._gen_fsm_indexes_dic(enc, vs)[val]
                     ret = ast.parse(n + "[" + str(val) + "] == 1").body[0].value
                     return ret
                 else:
                     enc = fsms[n]['encoding']
                     vs = fsms[n]['values']
-                    val = nyanMigen._gen_fsm_states_dic(enc, vs)[code.comparators[0].s]
+                    val = nyanMigen._gen_fsm_states_dic(enc, vs)[val]
                     code.comparators[0]=val
                     return code
         return nyanMigen._loop_through_ast(code, fix, fsms)
@@ -627,7 +642,7 @@ class nyanMigen:
                 for i in code.targets:
                     if isinstance(i, Name):
                         if isinstance(i.ctx, Store):
-                            nyanMigen._set_type(ctx, i.id, "Signal()", code.value.args)
+                            nyanMigen._set_type(ctx, i.id, "Signal()", code.value.args, code.value.keywords)
                             ctx[i.id]["forced_port"] = fp
                             if domain:
                                 ctx[i.id]['domain'] = domain
@@ -910,7 +925,7 @@ class nyanMigen:
         except:
             return False
 
-    def _set_type(ctx, n, v, args = None):
+    def _set_type(ctx, n, v, args = None, kw = None):
         if not n in ctx:
             ctx[n] = {}
         if "type" in ctx[n]:
@@ -919,7 +934,10 @@ class nyanMigen:
         if v != "Module()":
             ctx[n]["driver"] = False
             ctx[n]["is_driven"] = False
-            ctx[n]["args"] = args
+            if args:
+                ctx[n]["args"] = args
+            if kw:
+                ctx[n]['keywords'] = kw
 
     def _get_type(ctx, n):
         if n in ctx:
@@ -965,7 +983,10 @@ class nyanMigen:
             n = v.id
             is_assign = True
             t = ctx[n]['type']
-            args = ctx[n]['args']
+            if 'args' in ctx[n]:
+                args = ctx[n]['args']
+            else:
+                args = []
         except:
             try:
                 n = v.value.id
@@ -994,7 +1015,7 @@ class nyanMigen:
         else:
             raise Failure("unknown signal type for signal " + i)
         add.targets[0].id = i
-        if ctx[i]["args"]:
+        if 'args' in ctx[i]:
             add.value.args = ctx[i]["args"]
         return add
 

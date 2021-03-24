@@ -9,7 +9,6 @@ class inherit_width_from_slicing(Elaboratable):
         main(top, name='inherit_width_from_slicing', ports=top.ports())
 
     def __init__(self):
-        pass
         self.led = Signal()
 
     def ports(self):

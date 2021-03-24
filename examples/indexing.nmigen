@@ -9,7 +9,6 @@ class indexing(Elaboratable):
         main(top, name='indexing', ports=top.ports())
 
     def __init__(self):
-        pass
         self.inp = Signal((3 ** 3))
         self.outp = Signal((3 ** 3))
 

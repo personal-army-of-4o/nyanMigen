@@ -9,7 +9,6 @@ class if_oneliner(Elaboratable):
         main(top, name='if_oneliner', ports=top.ports())
 
     def __init__(self):
-        pass
         self.b = Signal()
         self.a = Signal()
 
@@ -33,4 +32,4 @@ class if_oneliner(Elaboratable):
         return m
 
 if __name__ == '__main__':
-    if_onliner.main()
+    if_oneliner.main()
