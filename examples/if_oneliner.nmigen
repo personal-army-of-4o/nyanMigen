@@ -32,4 +32,4 @@ class if_oneliner(Elaboratable):
         return m
 
 if __name__ == '__main__':
-    if_onliner.main()
+    if_oneliner.main()
