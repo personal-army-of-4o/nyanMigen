@@ -119,7 +119,8 @@ class nyanMigen:
         c = Context(ctx)
         consts = c.python_constants
         for i in consts:
-            nyanMigen._expand_const(cls_src, i, ctx[i]["args"])
+            args = ctx[i]['args'] if 'args' in ctx[i] else []
+            nyanMigen._expand_const(cls_src, i, args)
 
     def parse(cls, fn):
         code = None
@@ -177,7 +178,9 @@ class nyanMigen:
             else:
                 raise Failure("unknown signal type for signal " + i)
             add.targets[0].attr = i
-            if ctx[i]["args"]:
+            if "keywords" in ctx[i]:
+                add.value.keywords = ctx[i]["keywords"]
+            if 'args' in ctx[i]:
                 add.value.args = ctx[i]["args"]
             body.append(add)
         code.body = body
@@ -603,21 +606,22 @@ class nyanMigen:
             ):
                 fp = False
                 domain = None
-                to_del = None
+                to_del = []
                 if len(code.value.keywords) > 0:
                     kw = code.value.keywords
                     for i in range(len(kw)):
                         if kw[i].arg == "port" and kw[i].value.value == True:
                             fp = True
+                            to_del.append(i)
                         if kw[i].arg == 'domain':
                             domain = kw[i].value.s
-                            to_del = i
-                if to_del:
-                    del code.value.keywords[to_del]
+                            to_del.append(i)
+                for i in sorted(to_del, reverse = True):
+                    del code.value.keywords[i]
                 for i in code.targets:
                     if isinstance(i, Name):
                         if isinstance(i.ctx, Store):
-                            nyanMigen._set_type(ctx, i.id, "Signal()", code.value.args)
+                            nyanMigen._set_type(ctx, i.id, "Signal()", code.value.args, code.value.keywords)
                             ctx[i.id]["forced_port"] = fp
                             if domain:
                                 ctx[i.id]['domain'] = domain
@@ -900,7 +904,7 @@ class nyanMigen:
         except:
             return False
 
-    def _set_type(ctx, n, v, args = None):
+    def _set_type(ctx, n, v, args = None, kw = None):
         if not n in ctx:
             ctx[n] = {}
         if "type" in ctx[n]:
@@ -909,7 +913,10 @@ class nyanMigen:
         if v != "Module()":
             ctx[n]["driver"] = False
             ctx[n]["is_driven"] = False
-            ctx[n]["args"] = args
+            if args:
+                ctx[n]["args"] = args
+            if kw:
+                ctx[n]['keywords'] = kw
 
     def _get_type(ctx, n):
         if n in ctx:
@@ -955,7 +962,10 @@ class nyanMigen:
             n = v.id
             is_assign = True
             t = ctx[n]['type']
-            args = ctx[n]['args']
+            if 'args' in ctx[n]:
+                args = ctx[n]['args']
+            else:
+                args = []
         except:
             try:
                 n = v.value.id
@@ -984,7 +994,7 @@ class nyanMigen:
         else:
             raise Failure("unknown signal type for signal " + i)
         add.targets[0].id = i
-        if ctx[i]["args"]:
+        if 'args' in ctx[i]:
             add.value.args = ctx[i]["args"]
         return add
 
