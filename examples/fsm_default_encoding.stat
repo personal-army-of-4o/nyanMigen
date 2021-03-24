@@ -4,4 +4,4 @@ decompression ratio: 3.2425531914893617
 inputs(0): []
 outputs(1): ['o: Signal()']
 generics(0): []
-domains(0): []
+domains(1): ['sync']
