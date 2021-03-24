@@ -9,7 +9,6 @@ class python_const(Elaboratable):
         main(top, name='python_const', ports=top.ports())
 
     def __init__(self):
-        pass
         self.o = Signal(32)
 
     def ports(self):

@@ -180,7 +180,7 @@ class nyanMigen:
             if ctx[i]["args"]:
                 add.value.args = ctx[i]["args"]
             body.append(add)
-        code.body.extend(body)
+        code.body = body
         return code
 
     def gen_exec(cls, ctx, generics_file):

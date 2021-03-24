@@ -9,7 +9,6 @@ class fsm_onehot(Elaboratable):
         main(top, name='fsm_onehot', ports=top.ports())
 
     def __init__(self):
-        pass
         self.i = Signal()
         self.o = Signal()
         self.o1 = Signal()

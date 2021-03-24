@@ -9,7 +9,6 @@ class no_main_call(Elaboratable):
         main(top, name='no_main_call', ports=top.ports())
 
     def __init__(self):
-        pass
         self.a = Signal()
         self.b = Signal()
 

@@ -9,7 +9,6 @@ class switch(Elaboratable):
         main(top, name='switch', ports=top.ports())
 
     def __init__(self):
-        pass
         self.a = Signal(2)
         self.b = Signal(2)
 

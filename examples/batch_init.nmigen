@@ -9,7 +9,6 @@ class batch_init(Elaboratable):
         main(top, name='batch_init', ports=top.ports())
 
     def __init__(self):
-        pass
         self.b = Signal()
         self.a = Signal()
 
