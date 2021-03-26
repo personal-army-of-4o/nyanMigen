@@ -330,38 +330,37 @@ class nyanMigen:
     def _parse_fsm_states(code, fsms):
         n = nyanMigen._is_fsm_switch(code, fsms)
         if n:
-            fsms[n]['values'] = nyanMigen._parse_fsm_states_from_cases(code)
-            add = nyanMigen._parse_fsm_states_from_assigns(code, n)
-            fsms[n]['values'] = fsms[n]['values'] + list(set(add) - set(fsms[n]['values']))
+            if 'values' not in fsms[n]:
+                fsms[n]['values'] = []
+            nyanMigen._parse_fsm_states_from_cases(code, n, fsms)
+        nyanMigen._parse_fsm_states_from_assigns(code, fsms)
 
-    def _parse_fsm_states_from_cases(code):
-        ret = []
+    def _parse_fsm_states_from_cases(code, n, fsms):
         for i in code.body:
-            ret.append(i.items[0].context_expr.args[0].s)
-        return ret
+            v = i.items[0].context_expr.args[0].s
+            if v not in fsms[n]['values']:
+                fsms[n]['values'].append(v)
 
-    def _parse_fsm_states_from_assigns(code, n):
-        ret = []
+    def _parse_fsm_states_from_assigns(code, fsms):
+        def detect(code, fsms):
+            if (
+                isinstance(code, Assign) and
+                len(code.targets) == 1 and
+                isinstance(code.targets[0], Name) and
+                isinstance(code.targets[0].ctx, Store) and
+                code.targets[0].id in fsms and
+                isinstance(code.value, Str)
+            ):
+                n = code.targets[0].id
+                v = code.value.s
+                if 'values' in fsms[n]:
+                    if v not in fsms[n]['values']:
+                        fsms[n]['values'].append(v)
+                else:
+                    fsms[n]['values'] = [v]
         for i in code.body:
             for j in i.body:
-                try:
-                    for k in j.targets:
-                        try:
-                            check = k.id
-                        except:
-                            try:
-                                check = k.attr
-                            except:
-                                pass
-                        try:
-                            if check == n:
-                                ret.append(j.value.s)
-                                break
-                        except:
-                            pass
-                except:
-                    pass
-        return ret
+                nyanMigen._loop_through_ast(j, detect, fsms)
 
     def _fix_fsm_init(code, fsms):
         if nyanMigen._is_fsm_init(code):
