@@ -9,7 +9,6 @@ class const_bug1(Elaboratable):
         main(top, name='const_bug1', ports=top.ports())
 
     def __init__(self):
-        pass
         self.i = Signal(32)
         self.o = Signal()
 

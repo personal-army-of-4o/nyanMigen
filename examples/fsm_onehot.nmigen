@@ -46,18 +46,18 @@ class fsm_onehot(Elaboratable):
             m.d.comb += o3.eq(0)
         with m.Switch(state):
             with m.Case(1):
-                m.d.comb += o.eq(0)
-            with m.Case(2):
-                m.d.comb += o.eq(0)
-            with m.Case(4):
-                m.d.comb += o.eq(1)
-        with m.Switch(state):
-            with m.Case(1):
                 m.d.sync += state.eq(2)
             with m.Case(2):
                 m.d.sync += state.eq(4)
             with m.Case(4):
                 m.d.sync += state.eq(8)
+        with m.Switch(state):
+            with m.Case(1):
+                m.d.comb += o.eq(0)
+            with m.Case(2):
+                m.d.comb += o.eq(0)
+            with m.Case(4):
+                m.d.comb += o.eq(1)
         return m
 
 if __name__ == '__main__':

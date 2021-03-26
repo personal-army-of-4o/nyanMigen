@@ -25,8 +25,8 @@ class indexing(Elaboratable):
         m = Module()
         inp = self.inp
         outp = self.outp
-        ari = Array((Array((Signal() for _ in range(3))) for _ in range(3)))
-        aro = Array((Array((Signal() for _ in range(3))) for _ in range(3)))
+        ari = Array((Array((Array((Signal() for _ in range(3))) for _ in range(3))) for _ in range(3)))
+        aro = Array((Array((Array((Signal() for _ in range(3))) for _ in range(3))) for _ in range(3)))
         for i in range(3):
             for j in range(3):
                 for k in range(3):
