@@ -5,8 +5,9 @@ from nmigen.cli import main
 class fsm_encoding_bug1(Elaboratable):
 
     def main():
-        top = fsm_encoding_bug1()
-        main(top, name='fsm_encoding_bug1', ports=top.ports())
+        if (__name__ == '__main__'):
+            top = fsm_encoding_bug1()
+            main(top, name='fsm_encoding_bug1', ports=top.ports())
 
     def __init__(self):
         self.iStart = Signal()

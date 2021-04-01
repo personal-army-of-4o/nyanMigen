@@ -1,6 +1,6 @@
 source chars: 309
-result chars: 980
-decompression ratio: 3.1715210355987056
+result chars: 1025
+decompression ratio: 3.3171521035598706
 inputs(1): ['iStart: Signal()']
 outputs(1): ['oError: Signal()']
 generics(0): []
