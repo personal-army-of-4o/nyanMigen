@@ -5,8 +5,9 @@ from nmigen.cli import main
 class switch(Elaboratable):
 
     def main():
-        top = switch()
-        main(top, name='switch', ports=top.ports())
+        if (__name__ == '__main__'):
+            top = switch()
+            main(top, name='switch', ports=top.ports())
 
     def __init__(self):
         self.a = Signal(2)

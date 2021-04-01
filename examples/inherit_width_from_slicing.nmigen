@@ -5,8 +5,9 @@ from nmigen.cli import main
 class inherit_width_from_slicing(Elaboratable):
 
     def main():
-        top = inherit_width_from_slicing()
-        main(top, name='inherit_width_from_slicing', ports=top.ports())
+        if (__name__ == '__main__'):
+            top = inherit_width_from_slicing()
+            main(top, name='inherit_width_from_slicing', ports=top.ports())
 
     def __init__(self):
         self.led = Signal()

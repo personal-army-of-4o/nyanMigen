@@ -214,8 +214,9 @@ class nyanMigen:
         str = (
             "def main():\n" +
             generics_str +
-            "    top = " + cls.body[0].name + "(" + args_str + ")\n" +
-            "    main(top, name = \"" + cls.body[0].name + "\", ports = top.ports())"
+            "    if __name__ == '__main__':\n" +
+            "        top = " + cls.body[0].name + "(" + args_str + ")\n" +
+            "        main(top, name = \"" + cls.body[0].name + "\", ports = top.ports())"
         )
         code = ast.parse(str)
         return code.body[0]

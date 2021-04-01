@@ -5,8 +5,9 @@ from nmigen.cli import main
 class blink(Elaboratable):
 
     def main():
-        top = blink()
-        main(top, name='blink', ports=top.ports())
+        if (__name__ == '__main__'):
+            top = blink()
+            main(top, name='blink', ports=top.ports())
 
     def __init__(self):
         self.led = Signal()

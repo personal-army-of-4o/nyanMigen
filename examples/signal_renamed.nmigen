@@ -5,8 +5,9 @@ from nmigen.cli import main
 class signal_renamed(Elaboratable):
 
     def main():
-        top = signal_renamed()
-        main(top, name='signal_renamed', ports=top.ports())
+        if (__name__ == '__main__'):
+            top = signal_renamed()
+            main(top, name='signal_renamed', ports=top.ports())
 
     def __init__(self):
         self.i = Signal()

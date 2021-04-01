@@ -5,8 +5,9 @@ from nmigen.cli import main
 class batch_init(Elaboratable):
 
     def main():
-        top = batch_init()
-        main(top, name='batch_init', ports=top.ports())
+        if (__name__ == '__main__'):
+            top = batch_init()
+            main(top, name='batch_init', ports=top.ports())
 
     def __init__(self):
         self.b = Signal()
