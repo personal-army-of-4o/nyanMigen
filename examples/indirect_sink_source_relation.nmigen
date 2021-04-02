@@ -4,10 +4,10 @@ from nmigen.cli import main
 
 class indirect_sink_source_relation(Elaboratable):
 
-    def main():
-        if (__name__ == '__main__'):
-            top = indirect_sink_source_relation()
-            main(top, name='indirect_sink_source_relation', ports=top.ports())
+    @classmethod
+    def main(cls):
+        top = indirect_sink_source_relation()
+        main(top, name='indirect_sink_source_relation', ports=top.ports())
 
     def __init__(self):
         self.a = Signal()

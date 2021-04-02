@@ -4,10 +4,10 @@ from nmigen.cli import main
 
 class fsm_default_encoding(Elaboratable):
 
-    def main():
-        if (__name__ == '__main__'):
-            top = fsm_default_encoding()
-            main(top, name='fsm_default_encoding', ports=top.ports())
+    @classmethod
+    def main(cls):
+        top = fsm_default_encoding()
+        main(top, name='fsm_default_encoding', ports=top.ports())
 
     def __init__(self):
         self.o = Signal()

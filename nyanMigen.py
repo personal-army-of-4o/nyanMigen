@@ -3,6 +3,7 @@ import inspect
 from ast import *
 from pprintast import pprintast as ppa
 from astunparse import unparse
+import traceback
 
 
 def nyanify(generics_file = None, print_ctx = False):
@@ -29,7 +30,8 @@ def nyanify(generics_file = None, print_ctx = False):
         nyanMigen.propagate_constants(cls_src, ctx)
         print(unparse(cls_src))
         ret = nyanMigen.compile(cls_src, classname)
-        ret.main()
+        if len(traceback.extract_stack()) == 2:
+            ret.main()
         return ret
 
     return foo
@@ -212,11 +214,11 @@ class nyanMigen:
             )
             args_str = ', '.join(map(add_generics2str, generics))
         str = (
-            "def main():\n" +
+            "@classmethod\n" +
+            "def main(cls):\n" +
             generics_str +
-            "    if __name__ == '__main__':\n" +
-            "        top = " + cls.body[0].name + "(" + args_str + ")\n" +
-            "        main(top, name = \"" + cls.body[0].name + "\", ports = top.ports())"
+            "    top = " + cls.body[0].name + "(" + args_str + ")\n" +
+            "    main(top, name = \"" + cls.body[0].name + "\", ports = top.ports())"
         )
         code = ast.parse(str)
         return code.body[0]

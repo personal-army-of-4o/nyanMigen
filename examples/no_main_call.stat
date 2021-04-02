@@ -1,6 +1,6 @@
 source chars: 111
-result chars: 600
-decompression ratio: 5.405405405405405
+result chars: 575
+decompression ratio: 5.18018018018018
 inputs(1): ['a: Signal()']
 outputs(1): ['b: Signal()']
 generics(0): []
