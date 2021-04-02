@@ -1,6 +1,6 @@
 source chars: 231
-result chars: 836
-decompression ratio: 3.619047619047619
+result chars: 811
+decompression ratio: 3.5108225108225106
 inputs(0): []
 outputs(1): ['o: Signal()']
 generics(0): []

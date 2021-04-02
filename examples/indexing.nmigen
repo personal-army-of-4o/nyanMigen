@@ -4,10 +4,10 @@ from nmigen.cli import main
 
 class indexing(Elaboratable):
 
-    def main():
-        if (__name__ == '__main__'):
-            top = indexing()
-            main(top, name='indexing', ports=top.ports())
+    @classmethod
+    def main(cls):
+        top = indexing()
+        main(top, name='indexing', ports=top.ports())
 
     def __init__(self):
         self.inp = Signal((3 ** 3))

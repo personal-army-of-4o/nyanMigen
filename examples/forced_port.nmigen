@@ -4,10 +4,10 @@ from nmigen.cli import main
 
 class forced_port(Elaboratable):
 
-    def main():
-        if (__name__ == '__main__'):
-            top = forced_port()
-            main(top, name='forced_port', ports=top.ports())
+    @classmethod
+    def main(cls):
+        top = forced_port()
+        main(top, name='forced_port', ports=top.ports())
 
     def __init__(self):
         self.a = Signal(5)

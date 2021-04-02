@@ -4,10 +4,10 @@ from nmigen.cli import main
 
 class no_main_call(Elaboratable):
 
-    def main():
-        if (__name__ == '__main__'):
-            top = no_main_call()
-            main(top, name='no_main_call', ports=top.ports())
+    @classmethod
+    def main(cls):
+        top = no_main_call()
+        main(top, name='no_main_call', ports=top.ports())
 
     def __init__(self):
         self.a = Signal()

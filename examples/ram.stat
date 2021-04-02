@@ -1,6 +1,6 @@
 source chars: 303
-result chars: 1450
-decompression ratio: 4.785478547854786
+result chars: 1425
+decompression ratio: 4.702970297029703
 inputs(4): ['wr_en: Signal()', 'wr_addr: Signal()', 'wr_data: Signal()', 'rd_addr: Signal()']
 outputs(1): ['rd_data: Signal()']
 generics(2): ['aw', 'dw']

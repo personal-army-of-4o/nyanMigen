@@ -4,10 +4,10 @@ from nmigen.cli import main
 
 class fsm_onehot(Elaboratable):
 
-    def main():
-        if (__name__ == '__main__'):
-            top = fsm_onehot()
-            main(top, name='fsm_onehot', ports=top.ports())
+    @classmethod
+    def main(cls):
+        top = fsm_onehot()
+        main(top, name='fsm_onehot', ports=top.ports())
 
     def __init__(self):
         self.i = Signal()

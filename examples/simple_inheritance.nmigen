@@ -4,10 +4,10 @@ from nmigen.cli import main
 
 class simple_inheritance(Elaboratable):
 
-    def main():
-        if (__name__ == '__main__'):
-            top = simple_inheritance()
-            main(top, name='simple_inheritance', ports=top.ports())
+    @classmethod
+    def main(cls):
+        top = simple_inheritance()
+        main(top, name='simple_inheritance', ports=top.ports())
 
     def __init__(self):
         self.ins = Signal()

@@ -4,13 +4,13 @@ from nmigen.cli import main
 
 class ram(Elaboratable):
 
-    def main():
+    @classmethod
+    def main(cls):
         import json
         with open('config.json', 'r') as read_file:
             generics = json.load(read_file)
-        if (__name__ == '__main__'):
-            top = ram(generics['aw'], generics['dw'])
-            main(top, name='ram', ports=top.ports())
+        top = ram(generics['aw'], generics['dw'])
+        main(top, name='ram', ports=top.ports())
 
     def __init__(self, aw, dw):
         self.aw = aw

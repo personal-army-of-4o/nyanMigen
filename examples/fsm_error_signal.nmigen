@@ -4,10 +4,10 @@ from nmigen.cli import main
 
 class fsm_error_signal(Elaboratable):
 
-    def main():
-        if (__name__ == '__main__'):
-            top = fsm_error_signal()
-            main(top, name='fsm_error_signal', ports=top.ports())
+    @classmethod
+    def main(cls):
+        top = fsm_error_signal()
+        main(top, name='fsm_error_signal', ports=top.ports())
 
     def __init__(self):
         self.o = Signal()
