@@ -8,6 +8,7 @@ import traceback
 
 def nyanify(generics_file = None, print_ctx = False):
     def foo(cls):
+        called_directly = len(traceback.extract_stack()) == 2
         cls_src = classify(cls)
         classname = cls_src.body[0].name
         nyanMigen.add_heritage(cls_src)
@@ -28,9 +29,10 @@ def nyanify(generics_file = None, print_ctx = False):
             for i in ctx:
                 print(i, ctx[i])
         nyanMigen.propagate_constants(cls_src, ctx)
-        print(unparse(cls_src))
+        if called_directly:
+            print(unparse(cls_src))
         ret = nyanMigen.compile(cls_src, classname)
-        if len(traceback.extract_stack()) == 2:
+        if called_directly:
             ret.main()
         return ret
 
