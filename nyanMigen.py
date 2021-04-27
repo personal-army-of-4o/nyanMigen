@@ -6,37 +6,49 @@ from astunparse import unparse
 import traceback
 
 
-def nyanify(generics_file = None, print_ctx = False):
-    def foo(cls):
-        called_directly = len(traceback.extract_stack()) == 2
-        cls_src = classify(cls)
-        classname = cls_src.body[0].name
-        nyanMigen.add_heritage(cls_src)
-        code = nyanMigen.parse(cls_src, "elaborate")
-        (elaborate, ctx) = nyanMigen.fix(code)
-        ports = nyanMigen.gen_ports(ctx)
-        inputs = nyanMigen.gen_in_ports(ctx)
-        outputs = nyanMigen.gen_out_ports(ctx)
-        init = nyanMigen.gen_init(ctx)
-        e = nyanMigen.gen_exec(cls_src, ctx, generics_file)
-        cls_src.body[0].body = [e, init, ports, inputs, outputs, elaborate]
-        imports = ast.parse("from nmigen import *\nfrom nmigen.cli import main").body
-        imports.extend(cls_src.body)
-        cls_src.body = imports
-        s = nyanStatistics(cls, cls_src, ctx, classname)
-        s.dump_statistics()
-        if print_ctx:
-            for i in ctx:
-                print(i, ctx[i])
-        nyanMigen.propagate_constants(cls_src, ctx)
-        if called_directly:
-            print(unparse(cls_src))
-        ret = nyanMigen.compile(cls_src, classname)
-        if called_directly:
-            ret.main()
-        return ret
+def nyanify_foo(cls):
+    print(">>> nyanify_foo")
 
-    return foo
+    generics_file = None
+    print_ctx = False
+
+    called_directly = True
+    # called_directly = len(traceback.extract_stack()) == 2
+    cls_src = classify(cls)
+    classname = cls_src.body[0].name
+    nyanMigen.add_heritage(cls_src)
+    code = nyanMigen.parse(cls_src, "elaborate")
+    (elaborate, ctx) = nyanMigen.fix(code)
+    ports = nyanMigen.gen_ports(ctx)
+    inputs = nyanMigen.gen_in_ports(ctx)
+    outputs = nyanMigen.gen_out_ports(ctx)
+    init = nyanMigen.gen_init(ctx)
+    e = nyanMigen.gen_exec(cls_src, ctx, generics_file)
+    cls_src.body[0].body = [e, init, ports, inputs, outputs, elaborate]
+    imports = ast.parse("from nmigen import *\nfrom nmigen.cli import main").body
+    imports.extend(cls_src.body)
+    cls_src.body = imports
+    s = nyanStatistics(cls, cls_src, ctx, classname)
+    s.dump_statistics()
+    if print_ctx:
+        for i in ctx:
+            print(i, ctx[i])
+    nyanMigen.propagate_constants(cls_src, ctx)
+    if called_directly:
+        print(unparse(cls_src))
+    ret = nyanMigen.compile(cls_src, classname)
+    if called_directly:
+        ret.main()
+    return ret
+
+def nyanify(func):
+    print(">>> nyanify")
+
+    def wrapper():
+        print(">>> wrapper")
+        return nyanify_foo(func)
+
+    return wrapper
 
 def classify(cls):
     if inspect.isclass(cls):
