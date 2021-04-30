@@ -1,7 +1,7 @@
 from nyanMigen import nyanify
 
 
-@nyanify()
+@nyanify
 def fsm_error_signal():
     s = Fsm(encoding = 'onehot', init = 'one')
     o = Signal()

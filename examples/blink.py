@@ -1,7 +1,7 @@
 from nyanMigen import nyanify
 
 
-@nyanify()
+@nyanify
 def blink():
     cnt = Signal(24, domain = 'sync')
 

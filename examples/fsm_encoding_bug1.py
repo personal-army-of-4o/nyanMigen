@@ -1,7 +1,7 @@
 from nyanMigen import nyanify
 
 
-@nyanify()
+@nyanify
 def fsm_encoding_bug1():
     state = Fsm(init = 'idle')
     iStart = Signal()

@@ -1,7 +1,7 @@
 from nyanMigen import nyanify
 
 
-@nyanify()
+@nyanify
 class forced_port:
     def elaborate(self, platform):
         a = Signal(5)

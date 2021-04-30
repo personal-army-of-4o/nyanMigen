@@ -1,7 +1,7 @@
 from nyanMigen import nyanify
 
 
-@nyanify()
+@nyanify
 def switch():
     a = Signal(2)
     b = Signal(2)

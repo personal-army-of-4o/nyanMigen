@@ -1,6 +1,6 @@
 from nyanMigen import nyanify
 
-@nyanify()
+@nyanify
 class batch_init:
     def elaborate(self, platform):
         a = b = Signal()
