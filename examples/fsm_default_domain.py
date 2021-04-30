@@ -1,7 +1,7 @@
 from nyanMigen import nyanify
 
 
-@nyanify()
+@nyanify
 def fsm_default_domain():
     s = Fsm(init = 'one')
     o = Signal()

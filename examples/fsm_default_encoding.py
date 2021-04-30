@@ -1,7 +1,7 @@
 from nyanMigen import nyanify
 
 
-@nyanify()
+@nyanify
 def fsm_default_encoding():
     s = Fsm(init = 'one')
     o = Signal()

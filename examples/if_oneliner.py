@@ -1,7 +1,7 @@
 
 from nyanMigen import nyanify
 
-@nyanify()
+@nyanify
 class if_oneliner:
     def elaborate(self, platform):
         a = Signal()

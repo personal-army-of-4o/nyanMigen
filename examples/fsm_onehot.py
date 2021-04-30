@@ -1,7 +1,7 @@
 from nyanMigen import nyanify
 
 
-@nyanify()
+@nyanify
 def fsm_onehot():
     state = test = Fsm(encoding = 'onehot', init = 'one')
     o = Signal()

@@ -6,9 +6,9 @@ from astunparse import unparse
 import traceback
 
 
-def nyanify(generics_file = None, print_ctx = False):
+def nyanify(arg = None, generics_file = None, print_ctx = False):
     def foo(cls):
-        called_directly = len(traceback.extract_stack()) == 2
+        called_directly = len(traceback.extract_stack()) in [2, 3]
         cls_src = classify(cls)
         classname = cls_src.body[0].name
         nyanMigen.add_heritage(cls_src)
@@ -35,7 +35,8 @@ def nyanify(generics_file = None, print_ctx = False):
         if called_directly:
             ret.main()
         return ret
-
+    if arg != None:
+        return foo(arg)
     return foo
 
 def classify(cls):
