@@ -343,9 +343,12 @@ class nyanMigen:
 
     def _parse_fsm_states_from_cases(code, n, fsms):
         for i in code.body:
-            v = i.items[0].context_expr.args[0].s
-            if v not in fsms[n]['values']:
-                fsms[n]['values'].append(v)
+            try:
+                v = i.items[0].context_expr.args[0].s
+                if v not in fsms[n]['values']:
+                    fsms[n]['values'].append(v)
+            except:
+                pass
 
     def _parse_fsm_states_from_assigns(code, fsms):
         def detect(code, fsms):
@@ -498,7 +501,10 @@ class nyanMigen:
             vs = fsms[n]['values']
             dic = nyanMigen._gen_fsm_states_dic(enc, vs)
             for i in code.body:
-                i.items[0].context_expr.args[0] = dic[i.items[0].context_expr.args[0].s]
+                try:
+                    i.items[0].context_expr.args[0] = dic[i.items[0].context_expr.args[0].s]
+                except:
+                    pass
         return nyanMigen._loop_through_ast(code, fix, fsms)
 
     def _is_fsm_init(code):
