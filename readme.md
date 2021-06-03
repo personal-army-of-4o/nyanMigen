@@ -17,6 +17,8 @@ to test: `run_test.bash`
 
 to install: `pip3 install .`
 
+to  build docker images: `cd docker && bash build.bash`
+
 shortest hello world ever: [blink.py](examples/blink.py)
 
 ## Repo structure:
