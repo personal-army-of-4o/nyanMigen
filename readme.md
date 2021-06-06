@@ -14,10 +14,11 @@ key features:
 ## Repo actions:
 
 to test: `run_test.bash`
+to test with docker images: `run_test.bash -g`
 
 to install: `pip3 install .`
 
-to  build docker images: `cd docker && bash build.bash`
+to build docker images: `cd docker && bash build.bash`
 
 shortest hello world ever: [blink.py](examples/blink.py)
 

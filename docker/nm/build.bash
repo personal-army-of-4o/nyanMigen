@@ -1,3 +1,3 @@
 #!/bin/bash
 
-docker build -t nm .
+docker build -t nm . $1
