@@ -14,7 +14,7 @@ key features:
 ## Repo actions:
 
 to test: `run_test.bash`
-to test with docker images: `run_test.bash -g`
+to test with docker images: `run_test.bash -d`
 
 to install: `pip3 install .`
 
